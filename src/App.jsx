@@ -7,6 +7,7 @@ import Preview from './components/Preview.jsx'
 import StatusBar from './components/StatusBar.jsx'
 import Settings from './components/Settings.jsx'
 import ImageModeHint, { shouldShowHint } from './components/ImageModeHint.jsx'
+import GuidePanel from './components/GuidePanel.jsx'
 
 const UPLOAD_CONFIG_KEY = 'md-editor-upload-config'
 const AUTOSAVE_KEY = 'md-editor-autosave'
@@ -65,6 +66,7 @@ export default function App() {
   const [showRename, setShowRename] = useState(false)
   const [renameInput, setRenameInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [showHint, setShowHint] = useState(() => shouldShowHint())
   const [lastSaved, setLastSaved] = useState(saved.content != null ? Date.now() : null)
   const [uploadConfig, setUploadConfig] = useState(() => {
@@ -234,6 +236,7 @@ export default function App() {
           >✎</button>
         </div>
         <div className="title-bar-actions">
+          <button className="view-btn" onClick={() => setShowGuide(true)} title="使用指南">Guide</button>
           <button className="view-btn" onClick={handleOpen} title="打开文件">Open</button>
           <button className="view-btn" onClick={handleSave} title="保存 (Cmd+S)">Save</button>
           <button className="view-btn" onClick={handleExportHtml} title="导出 HTML">Export</button>
@@ -297,6 +300,9 @@ export default function App() {
 
       {/* Image Mode Hint */}
       {showHint && <ImageModeHint onClose={() => setShowHint(false)} />}
+
+      {/* Guide Panel */}
+      {showGuide && <GuidePanel onClose={() => setShowGuide(false)} />}
 
       {/* Rename Modal */}
       {showRename && (() => {
