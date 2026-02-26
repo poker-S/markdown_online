@@ -1,6 +1,6 @@
 export default function StatusBar({ content, fileName }) {
   const text = content || ''
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0
+  const words = text.trim() ? (text.match(/[\u4e00-\u9fa5]/g) || []).length + (text.match(/[a-zA-Z]+/g) || []).length : 0
   const chars = text.length
   const lines = text.split('\n').length
 

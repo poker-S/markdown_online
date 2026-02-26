@@ -3,6 +3,7 @@ import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import katex from 'katex'
+import DOMPurify from 'dompurify'
 
 // Configure marked with highlight.js
 marked.use(markedHighlight({
@@ -39,7 +40,7 @@ export default function Preview({ content }) {
   const html = useMemo(() => {
     let rendered = marked.parse(content || '')
     rendered = renderMath(rendered)
-    return rendered
+    return DOMPurify.sanitize(rendered, { ADD_TAGS: ['math', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'msubsup', 'mover', 'munder', 'munderover', 'mtable', 'mtr', 'mtd', 'annotation'], ADD_ATTR: ['xmlns', 'encoding'] })
   }, [content])
 
   return (

@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import DOMPurify from 'dompurify'
+import { inlineStylesForWechat } from './utils/inlineStyles.js'
 import Toolbar from './components/Toolbar.jsx'
 import Editor from './components/Editor.jsx'
 import Preview from './components/Preview.jsx'
@@ -132,19 +134,49 @@ export default function App() {
     input.click()
   }, [])
 
+  const handleCopyRich = useCallback(async () => {
+    const previewEl = document.querySelector('.preview-content')
+    if (!previewEl) return
+    const html = await inlineStylesForWechat(previewEl)
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }) })
+      ])
+      alert('已复制富文本，可粘贴到微信公众号编辑器')
+    } catch (e) {
+      // Fallback: use execCommand via a temporary contenteditable
+      const div = document.createElement('div')
+      div.contentEditable = 'true'
+      div.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
+      div.innerHTML = html
+      document.body.appendChild(div)
+      const sel = window.getSelection()
+      const range = document.createRange()
+      range.selectNodeContents(div)
+      sel.removeAllRanges()
+      sel.addRange(range)
+      document.execCommand('copy')
+      sel.removeAllRanges()
+      document.body.removeChild(div)
+      alert('已复制富文本，可粘贴到微信公众号编辑器')
+    }
+  }, [])
+
   const handleExportHtml = useCallback(() => {
     import('./components/Preview.jsx').then(() => {
       const previewEl = document.querySelector('.preview-content')
       if (!previewEl) return
+      const safeBody = DOMPurify.sanitize(previewEl.innerHTML)
+      const safeTitle = fileName.replace('.md', '').replace(/[<>"&]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]))
       const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>${fileName.replace('.md', '')}</title>
+<title>${safeTitle}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
 <style>body{max-width:800px;margin:40px auto;padding:0 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;color:#1d1d1f}</style>
 </head>
-<body>${previewEl.innerHTML}</body>
+<body>${safeBody}</body>
 </html>`
       const blob = new Blob([html], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
@@ -192,6 +224,7 @@ export default function App() {
           <button className="view-btn" onClick={handleOpen} title="打开文件">Open</button>
           <button className="view-btn" onClick={handleSave} title="保存 (Cmd+S)">Save</button>
           <button className="view-btn" onClick={handleExportHtml} title="导出 HTML">Export</button>
+          <button className="view-btn" onClick={handleCopyRich} title="复制富文本（微信公众号）">Copy</button>
           <div className="view-mode-group">
             <button className={`view-btn ${viewMode === 'editor' ? 'active' : ''}`} onClick={() => setViewMode('editor')} title="仅编辑">Edit</button>
             <button className={`view-btn ${viewMode === 'split' ? 'active' : ''}`} onClick={() => setViewMode('split')} title="分栏">Split</button>

@@ -35,6 +35,9 @@ async function uploadToSMMS(file, token) {
 }
 
 async function uploadToCustom(file, config) {
+  let parsed
+  try { parsed = new URL(config.endpoint) } catch { throw new Error('无效的上传接口 URL') }
+  if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('上传接口必须使用 HTTP/HTTPS 协议')
   const formData = new FormData()
   formData.append(config.fieldName || 'file', file)
   const headers = {}

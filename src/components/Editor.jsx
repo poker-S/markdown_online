@@ -59,13 +59,19 @@ export default function Editor({ content, onChange, theme, editorViewRef, upload
             }
           })
           .catch(() => {
-            // Fallback to base64 on failure
             fileToBase64(file).then(base64 => {
               const doc = view.state.doc.toString()
               const idx = doc.indexOf(placeholder)
               if (idx !== -1) {
                 const mdText = `![image](${base64})`
                 view.dispatch({ changes: { from: idx, to: idx + placeholder.length, insert: mdText } })
+                onChangeRef.current(view.state.doc.toString())
+              }
+            }).catch(() => {
+              const doc = view.state.doc.toString()
+              const idx = doc.indexOf(placeholder)
+              if (idx !== -1) {
+                view.dispatch({ changes: { from: idx, to: idx + placeholder.length, insert: '' } })
                 onChangeRef.current(view.state.doc.toString())
               }
             })
