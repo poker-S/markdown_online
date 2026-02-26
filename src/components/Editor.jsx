@@ -4,6 +4,7 @@ import { EditorState } from '@codemirror/state'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { uploadImage, fileToBase64 } from '../utils/imageUpload.js'
+import { base64CollapsePlugin } from '../utils/base64Collapse.js'
 
 const lightTheme = EditorView.theme({
   '&': { background: 'var(--bg-primary)', color: 'var(--text-primary)', height: '100%' },
@@ -92,6 +93,7 @@ export default function Editor({ content, onChange, theme, editorViewRef, upload
         }
       }),
       theme === 'dark' ? oneDark : lightTheme,
+      ...base64CollapsePlugin,
     ]
 
     const state = EditorState.create({ doc: content, extensions })

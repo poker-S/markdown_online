@@ -1,4 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import MathPanel from './MathPanel.jsx'
+import TableBuilder from './TableBuilder.jsx'
 
 const TOOLBAR_ITEMS = [
   {
@@ -39,7 +41,6 @@ const TOOLBAR_ITEMS = [
     items: [
       { label: '🔗 链接', title: '插入链接', snippet: '[链接文字](https://example.com)' },
       { label: '🖼 图片', title: '插入图片 URL', snippet: '![图片描述](https://example.com/image.png)' },
-      { label: '⊞ 表格', title: '插入表格', snippet: '| 列1 | 列2 | 列3 |\n|-----|-----|-----|\n| 内容 | 内容 | 内容 |' },
     ]
   },
 ]
@@ -80,6 +81,9 @@ function insertBlock(view, start, end) {
 }
 
 export default function Toolbar({ editorViewRef }) {
+  const [showMath, setShowMath] = useState(false)
+  const [showTable, setShowTable] = useState(false)
+
   const handleAction = useCallback((item) => {
     const view = editorViewRef.current
     if (!view) return
@@ -98,22 +102,41 @@ export default function Toolbar({ editorViewRef }) {
   }, [editorViewRef])
 
   return (
-    <div className="toolbar">
-      {TOOLBAR_ITEMS.map((group, gi) => (
-        <div key={gi} className="toolbar-group">
-          {group.items.map((item, ii) => (
-            <button
-              key={ii}
-              className={`tb-btn ${item.cls || ''}`}
-              title={item.title}
-              onMouseDown={(e) => { e.preventDefault(); handleAction(item) }}
-            >
-              {item.label}
-            </button>
-          ))}
-          {gi < TOOLBAR_ITEMS.length - 1 && <span className="toolbar-sep" />}
+    <>
+      <div className="toolbar">
+        {TOOLBAR_ITEMS.map((group, gi) => (
+          <div key={gi} className="toolbar-group">
+            {group.items.map((item, ii) => (
+              <button
+                key={ii}
+                className={`tb-btn ${item.cls || ''}`}
+                title={item.title}
+                onMouseDown={(e) => { e.preventDefault(); handleAction(item) }}
+              >
+                {item.label}
+              </button>
+            ))}
+            {gi < TOOLBAR_ITEMS.length - 1 && <span className="toolbar-sep" />}
+          </div>
+        ))}
+        <div className="toolbar-group">
+          <span className="toolbar-sep" />
+          <button className="tb-btn" title="插入表格" onMouseDown={(e) => { e.preventDefault(); setShowTable(true) }}>⊞ 表格</button>
+          <button className="tb-btn" title="数学公式库" onMouseDown={(e) => { e.preventDefault(); setShowMath(true) }}>∑ 公式</button>
         </div>
-      ))}
-    </div>
+      </div>
+      {showMath && (
+        <MathPanel
+          onInsert={(text) => { insertText(editorViewRef.current, text); setShowMath(false) }}
+          onClose={() => setShowMath(false)}
+        />
+      )}
+      {showTable && (
+        <TableBuilder
+          onInsert={(text) => { insertText(editorViewRef.current, text); setShowTable(false) }}
+          onClose={() => setShowTable(false)}
+        />
+      )}
+    </>
   )
 }

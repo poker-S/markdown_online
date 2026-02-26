@@ -2,92 +2,42 @@ import { useState } from 'react'
 
 export default function Settings({ config, onSave, onClose }) {
   const [service, setService] = useState(config?.service || 'base64')
-  const [token, setToken] = useState(config?.token || '')
-  const [endpoint, setEndpoint] = useState(config?.endpoint || '')
-  const [fieldName, setFieldName] = useState(config?.fieldName || 'file')
-  const [urlPath, setUrlPath] = useState(config?.urlPath || 'url')
 
   const handleSave = () => {
-    onSave({ service, token, endpoint, fieldName, urlPath })
+    onSave({ service })
     onClose()
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ width: 480 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span className="modal-title">图片上传设置</span>
+          <span className="modal-title">图片存储设置</span>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
-
         <div className="modal-body">
           <div className="form-group">
-            <label>上传方式</label>
+            <label>存储方式</label>
             <select value={service} onChange={e => setService(e.target.value)}>
-              <option value="base64">内嵌 Base64（无需配置，链接较长）</option>
-              <option value="smms">SM.MS 图床（需要 API Token）</option>
-              <option value="custom">自定义接口</option>
+              <option value="base64">方案一：内嵌 Base64（推荐）</option>
+              <option value="local">方案二：本地文件引用</option>
             </select>
           </div>
 
-          {service === 'smms' && (
-            <div className="form-group">
-              <label>SM.MS API Token</label>
-              <input
-                type="password"
-                value={token}
-                onChange={e => setToken(e.target.value)}
-                placeholder="在 sm.ms 注册后获取"
-              />
-              <p className="form-hint">
-                前往 <a href="https://sm.ms" target="_blank" rel="noreferrer">sm.ms</a> 注册，在「User」→「API Token」页面获取
-              </p>
+          {service === 'base64' && (
+            <div style={{ borderRadius: 8, padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <p style={{ margin: '4px 0', lineHeight: 1.7 }}>图片数据直接嵌入 .md 文件，无需网络，文件可在任何地方打开并正常显示图片。</p>
+              <p style={{ margin: '6px 0 0', color: '#e53e3e', fontWeight: 600 }}>⚠️ 图片越多文件体积越大，不适合图片密集型文档。</p>
             </div>
           )}
 
-          {service === 'custom' && (
-            <>
-              <div className="form-group">
-                <label>上传接口 URL</label>
-                <input
-                  type="text"
-                  value={endpoint}
-                  onChange={e => setEndpoint(e.target.value)}
-                  placeholder="https://your-api.com/upload"
-                />
-              </div>
-              <div className="form-group">
-                <label>文件字段名</label>
-                <input
-                  type="text"
-                  value={fieldName}
-                  onChange={e => setFieldName(e.target.value)}
-                  placeholder="file"
-                />
-              </div>
-              <div className="form-group">
-                <label>响应中 URL 的路径</label>
-                <input
-                  type="text"
-                  value={urlPath}
-                  onChange={e => setUrlPath(e.target.value)}
-                  placeholder="data.url"
-                />
-                <p className="form-hint">用点号表示嵌套，例如响应为 {`{ "data": { "url": "..." } }`} 则填 data.url</p>
-              </div>
-              <div className="form-group">
-                <label>Authorization Token（可选）</label>
-                <input
-                  type="password"
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  placeholder="Bearer xxx"
-                />
-              </div>
-            </>
+          {service === 'local' && (
+            <div style={{ borderRadius: 8, padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <p style={{ margin: '4px 0', lineHeight: 1.7 }}>图片以相对路径引用（<code>./images/xxx.png</code>），文件体积小，与 VSCode 方式一致。</p>
+              <p style={{ margin: '6px 0 0', color: '#e53e3e', fontWeight: 600 }}>⚠️ 图片文件必须与 .md 文件放在同一目录，单独移动 .md 文件会导致图片无法显示。在线版不支持此方案。</p>
+            </div>
           )}
         </div>
-
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>取消</button>
           <button className="btn-save" onClick={handleSave}>保存</button>

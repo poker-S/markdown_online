@@ -6,8 +6,10 @@ import Editor from './components/Editor.jsx'
 import Preview from './components/Preview.jsx'
 import StatusBar from './components/StatusBar.jsx'
 import Settings from './components/Settings.jsx'
+import ImageModeHint, { shouldShowHint } from './components/ImageModeHint.jsx'
 
 const UPLOAD_CONFIG_KEY = 'md-editor-upload-config'
+const AUTOSAVE_KEY = 'md-editor-autosave'
 
 const DEFAULT_CONTENT = `# 欢迎使用 Markdown Editor
 
@@ -53,15 +55,18 @@ $$
 `
 
 export default function App() {
-  const [content, setContent] = useState(DEFAULT_CONTENT)
-  const [theme, setTheme] = useState('light')
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(AUTOSAVE_KEY)) || {} } catch { return {} } })()
+  const [content, setContent] = useState(saved.content ?? DEFAULT_CONTENT)
+  const [theme, setTheme] = useState(saved.theme ?? 'light')
   const [viewMode, setViewMode] = useState('split')
-  const [fileName, setFileName] = useState('Untitled.md')
+  const [fileName, setFileName] = useState(saved.fileName ?? 'Untitled.md')
   const [splitRatio, setSplitRatio] = useState(50)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [showRename, setShowRename] = useState(false)
   const [renameInput, setRenameInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [showHint, setShowHint] = useState(() => shouldShowHint())
+  const [lastSaved, setLastSaved] = useState(saved.content != null ? Date.now() : null)
   const [uploadConfig, setUploadConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem(UPLOAD_CONFIG_KEY)) || { service: 'base64' } }
     catch { return { service: 'base64' } }
@@ -79,6 +84,14 @@ export default function App() {
         : 'https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css'
     }
   }, [theme])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ content, fileName, theme }))
+      setLastSaved(Date.now())
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [content, fileName, theme])
 
   const handleDividerMouseDown = useCallback((e) => {
     e.preventDefault()
@@ -271,7 +284,7 @@ export default function App() {
       </div>
 
       {/* Status Bar */}
-      <StatusBar content={content} fileName={fileName} />
+      <StatusBar content={content} fileName={fileName} lastSaved={lastSaved} />
 
       {/* Settings Modal */}
       {showSettings && (
@@ -281,6 +294,9 @@ export default function App() {
           onClose={() => setShowSettings(false)}
         />
       )}
+
+      {/* Image Mode Hint */}
+      {showHint && <ImageModeHint onClose={() => setShowHint(false)} />}
 
       {/* Rename Modal */}
       {showRename && (() => {
