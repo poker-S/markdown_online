@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useLang } from '../utils/LangContext.jsx'
 import MathPanel from './MathPanel.jsx'
 import TableBuilder from './TableBuilder.jsx'
 import VisualEditor from './VisualEditor.jsx'
@@ -7,41 +8,41 @@ const TOOLBAR_ITEMS = [
   {
     group: 'heading',
     items: [
-      { label: 'H1', title: '一级标题', prefix: '# ', linePrefix: true },
-      { label: 'H2', title: '二级标题', prefix: '## ', linePrefix: true },
-      { label: 'H3', title: '三级标题', prefix: '### ', linePrefix: true },
+      { key: 'h1', prefix: '# ', linePrefix: true },
+      { key: 'h2', prefix: '## ', linePrefix: true },
+      { key: 'h3', prefix: '### ', linePrefix: true },
     ]
   },
   {
     group: 'inline',
     items: [
-      { label: 'B', title: '加粗 (Ctrl+B)', wrap: '**', cls: 'bold' },
-      { label: 'I', title: '斜体 (Ctrl+I)', wrap: '*', cls: 'italic' },
-      { label: 'S', title: '删除线', wrap: '~~', cls: 'strike' },
-      { label: '`', title: '行内代码', wrap: '`', cls: 'code-btn' },
+      { key: 'bold',   wrap: '**', cls: 'bold' },
+      { key: 'italic', wrap: '*',  cls: 'italic' },
+      { key: 'strike', wrap: '~~', cls: 'strike' },
+      { key: 'code',   wrap: '`',  cls: 'code-btn' },
     ]
   },
   {
     group: 'block',
     items: [
-      { label: '❝', title: '引用', prefix: '> ', linePrefix: true },
-      { label: '```', title: '代码块', block: '```\n', blockEnd: '\n```', cls: 'code-btn' },
-      { label: '—', title: '分割线', insert: '\n---\n' },
+      { key: 'quote',     prefix: '> ', linePrefix: true },
+      { key: 'codeBlock', block: '```\n', blockEnd: '\n```', cls: 'code-btn' },
+      { key: 'hr',        insert: '\n---\n' },
     ]
   },
   {
     group: 'list',
     items: [
-      { label: '• 列表', title: '无序列表', prefix: '- ', linePrefix: true },
-      { label: '1. 列表', title: '有序列表', prefix: '1. ', linePrefix: true },
-      { label: '☑ 任务', title: '任务列表', prefix: '- [ ] ', linePrefix: true },
+      { key: 'ul',   prefix: '- ',      linePrefix: true },
+      { key: 'ol',   prefix: '1. ',     linePrefix: true },
+      { key: 'task', prefix: '- [ ] ',  linePrefix: true },
     ]
   },
   {
     group: 'insert',
     items: [
-      { label: '🔗 链接', title: '插入链接', snippet: '[链接文字](https://example.com)' },
-      { label: '🖼 图片', title: '插入图片 URL', snippet: '![图片描述](https://example.com/image.png)' },
+      { key: 'link',  snippet: '[链接文字](https://example.com)' },
+      { key: 'image', snippet: '![图片描述](https://example.com/image.png)' },
     ]
   },
 ]
@@ -82,6 +83,7 @@ function insertBlock(view, start, end) {
 }
 
 export default function Toolbar({ editorViewRef }) {
+  const { t } = useLang()
   const [showMath, setShowMath] = useState(false)
   const [showTable, setShowTable] = useState(false)
   const [showVisual, setShowVisual] = useState(false)
@@ -89,18 +91,11 @@ export default function Toolbar({ editorViewRef }) {
   const handleAction = useCallback((item) => {
     const view = editorViewRef.current
     if (!view) return
-
-    if (item.wrap) {
-      wrapSelection(view, item.wrap)
-    } else if (item.linePrefix) {
-      prefixLine(view, item.prefix)
-    } else if (item.block) {
-      insertBlock(view, item.block, item.blockEnd)
-    } else if (item.insert) {
-      insertText(view, item.insert)
-    } else if (item.snippet) {
-      insertText(view, item.snippet)
-    }
+    if (item.wrap)        wrapSelection(view, item.wrap)
+    else if (item.linePrefix) prefixLine(view, item.prefix)
+    else if (item.block)  insertBlock(view, item.block, item.blockEnd)
+    else if (item.insert) insertText(view, item.insert)
+    else if (item.snippet) insertText(view, item.snippet)
   }, [editorViewRef])
 
   return (
@@ -112,10 +107,10 @@ export default function Toolbar({ editorViewRef }) {
               <button
                 key={ii}
                 className={`tb-btn ${item.cls || ''}`}
-                title={item.title}
+                title={t(`toolbar.${item.key}Title`)}
                 onMouseDown={(e) => { e.preventDefault(); handleAction(item) }}
               >
-                {item.label}
+                {t(`toolbar.${item.key}`)}
               </button>
             ))}
             {gi < TOOLBAR_ITEMS.length - 1 && <span className="toolbar-sep" />}
@@ -123,9 +118,9 @@ export default function Toolbar({ editorViewRef }) {
         ))}
         <div className="toolbar-group">
           <span className="toolbar-sep" />
-          <button className="tb-btn" title="插入表格" onMouseDown={(e) => { e.preventDefault(); setShowTable(true) }}>⊞ 表格</button>
-          <button className="tb-btn" title="数学公式库" onMouseDown={(e) => { e.preventDefault(); setShowMath(true) }}>∑ 公式</button>
-          <button className="tb-btn" title="可视化插入（Word 风格编辑）" onMouseDown={(e) => { e.preventDefault(); setShowVisual(true) }}>✦ 可视化插入</button>
+          <button className="tb-btn" title={t('toolbar.tableTitle')} onMouseDown={(e) => { e.preventDefault(); setShowTable(true) }}>{t('toolbar.table')}</button>
+          <button className="tb-btn" title={t('toolbar.mathTitle')} onMouseDown={(e) => { e.preventDefault(); setShowMath(true) }}>{t('toolbar.math')}</button>
+          <button className="tb-btn" title={t('toolbar.visualTitle')} onMouseDown={(e) => { e.preventDefault(); setShowVisual(true) }}>{t('toolbar.visual')}</button>
         </div>
       </div>
       {showMath && (

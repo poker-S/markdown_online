@@ -6,6 +6,11 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { uploadImage, fileToBase64 } from '../utils/imageUpload.js'
 import { base64CollapsePlugin } from '../utils/base64Collapse.js'
 
+const baseTheme = EditorView.theme({
+  '.cm-line': { minHeight: '1.7em' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftWidth: '2px' },
+})
+
 const lightTheme = EditorView.theme({
   '&': { background: 'var(--bg-primary)', color: 'var(--text-primary)', height: '100%' },
   '.cm-scroller': { fontFamily: "var(--font-mono, 'SF Mono', Consolas, monospace)", fontSize: '14px', lineHeight: '1.7' },
@@ -92,6 +97,7 @@ export default function Editor({ content, onChange, theme, editorViewRef, upload
           onChangeRef.current(update.state.doc.toString())
         }
       }),
+      baseTheme,
       theme === 'dark' ? oneDark : lightTheme,
       ...base64CollapsePlugin,
     ]

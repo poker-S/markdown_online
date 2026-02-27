@@ -246,6 +246,11 @@ html, body, #root {
   background: var(--border-color);
   transform: scale(0.96);
 }
+.tb-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
 .tb-btn.bold { font-weight: 700; }
 .tb-btn.italic { font-style: italic; }
 .tb-btn.strike { text-decoration: line-through; }

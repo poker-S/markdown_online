@@ -1,4 +1,7 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { useLang } from '../utils/LangContext.jsx'
+
+const VISUAL_DRAFT_KEY = 'md-editor-visual-draft'
 
 // ── HTML → Markdown ──────────────────────────────────────────────
 function nodeToMd(node) {
@@ -47,38 +50,38 @@ function htmlToMarkdown(html) {
   return Array.from(div.childNodes).map(nodeToMd).join('').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-// ── Toolbar config ────────────────────────────────────────────────
-const VIS_TOOLBAR = [
-  { label: 'H1', cmd: 'formatBlock', val: 'h1', title: '一级标题' },
-  { label: 'H2', cmd: 'formatBlock', val: 'h2', title: '二级标题' },
-  { label: 'H3', cmd: 'formatBlock', val: 'h3', title: '三级标题' },
-  null,
-  { label: 'B',  cmd: 'bold',          title: '加粗',   cls: 'bold' },
-  { label: 'I',  cmd: 'italic',        title: '斜体',   cls: 'italic' },
-  { label: 'S',  cmd: 'strikeThrough', title: '删除线', cls: 'strike' },
-  { label: '`',  cmd: 'code',          title: '行内代码', cls: 'code-btn', special: 'code' },
-  null,
-  { label: '❝',     cmd: 'formatBlock',          val: 'blockquote', title: '引用' },
-  { label: '• 列表', cmd: 'insertUnorderedList',  title: '无序列表' },
-  { label: '1. 列表',cmd: 'insertOrderedList',    title: '有序列表' },
-  null,
-  { label: '🔗 链接', cmd: 'createLink', title: '插入链接', special: 'link' },
-  { label: '🔲 表格', cmd: '', title: '插入表格', special: 'table' },
-  { label: '🖼 图片URL', cmd: '', title: '通过URL插入图片', special: 'image-url' },
-  { label: '📁 上传图片', cmd: '', title: '从本地上传图片', special: 'image-upload' },
-]
-
 // ── Main component ────────────────────────────────────────────────
 export default function VisualEditor({ editorViewRef, onClose }) {
+  const { t } = useLang()
   const [phase, setPhase] = useState('intro')
   const editRef = useRef(null)
 
+  const VIS_TOOLBAR = [
+    { label: t('visual.tb.h1'), cmd: 'formatBlock', val: 'h1', title: t('visual.tb.h1t') },
+    { label: t('visual.tb.h2'), cmd: 'formatBlock', val: 'h2', title: t('visual.tb.h2t') },
+    { label: t('visual.tb.h3'), cmd: 'formatBlock', val: 'h3', title: t('visual.tb.h3t') },
+    null,
+    { label: t('visual.tb.bold'),   cmd: 'bold',          title: t('visual.tb.boldt'),   cls: 'bold' },
+    { label: t('visual.tb.italic'), cmd: 'italic',        title: t('visual.tb.italict'), cls: 'italic' },
+    { label: t('visual.tb.strike'), cmd: 'strikeThrough', title: t('visual.tb.striket'), cls: 'strike' },
+    { label: t('visual.tb.code'),   cmd: 'code',          title: t('visual.tb.codet'),   cls: 'code-btn', special: 'code' },
+    null,
+    { label: t('visual.tb.quote'), cmd: 'formatBlock',         val: 'blockquote', title: t('visual.tb.quotet') },
+    { label: t('visual.tb.ul'),    cmd: 'insertUnorderedList',                    title: t('visual.tb.ult') },
+    { label: t('visual.tb.ol'),    cmd: 'insertOrderedList',                      title: t('visual.tb.olt') },
+    null,
+    { label: t('visual.tb.link'),        cmd: 'createLink', title: t('visual.tb.linkt'),        special: 'link' },
+    { label: t('visual.tb.table'),       cmd: '',           title: t('visual.tb.tablet'),        special: 'table' },
+    { label: t('visual.tb.imageUrl'),    cmd: '',           title: t('visual.tb.imageUrlt'),     special: 'image-url' },
+    { label: t('visual.tb.imageUpload'), cmd: '',           title: t('visual.tb.imageUploadt'),  special: 'image-upload' },
+  ]
+
   const execCmd = useCallback((item) => {
     if (item.special === 'link') {
-      const url = window.prompt('输入链接地址：', 'https://')
+      const url = window.prompt(t('visual.linkPrompt'), 'https://')
       if (url) document.execCommand('createLink', false, url)
     } else if (item.special === 'image-url') {
-      const url = window.prompt('输入图片地址：', 'https://')
+      const url = window.prompt(t('visual.imageUrlPrompt'), 'https://')
       if (url) {
         document.execCommand('insertHTML', false, `<img src="${url}" alt="image" style="max-width:100%">`)
       }
@@ -117,7 +120,7 @@ export default function VisualEditor({ editorViewRef, onClose }) {
       document.execCommand(item.cmd, false, null)
     }
     editRef.current?.focus()
-  }, [])
+  }, [t])
 
   const handleInsert = useCallback(() => {
     const html = editRef.current?.innerHTML || ''
@@ -130,15 +133,16 @@ export default function VisualEditor({ editorViewRef, onClose }) {
       view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length } })
       view.focus()
     }
+    localStorage.removeItem(VISUAL_DRAFT_KEY)
     onClose()
   }, [editorViewRef, onClose])
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="vis-modal" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="vis-modal">
         {phase === 'intro'
           ? <IntroScreen onConfirm={() => setPhase('editor')} onClose={onClose} />
-          : <EditorScreen editRef={editRef} execCmd={execCmd} onInsert={handleInsert} onClose={onClose} />
+          : <EditorScreen editRef={editRef} execCmd={execCmd} visToolbar={VIS_TOOLBAR} onInsert={handleInsert} onClose={onClose} />
         }
       </div>
     </div>
@@ -147,6 +151,7 @@ export default function VisualEditor({ editorViewRef, onClose }) {
 
 // ── Intro screen ──────────────────────────────────────────────────
 function IntroScreen({ onConfirm, onClose }) {
+  const { t } = useLang()
   return (
     <div className="vis-intro">
       <button className="modal-close vis-intro-close" onClick={onClose}>✕</button>
@@ -156,19 +161,74 @@ function IntroScreen({ onConfirm, onClose }) {
           <span key={i} className="vis-char" style={{ animationDelay: `${i * 0.07}s` }}>{ch}</span>
         ))}
       </div>
-      <p className="vis-intro-sub">可视化 Markdown 编辑器 · 所见即所得</p>
-      <button className="btn-save vis-intro-btn" onClick={onConfirm}>开始使用 →</button>
+      <p className="vis-intro-sub">{t('visual.introSub')}</p>
+      <button className="btn-save vis-intro-btn" onClick={onConfirm}>{t('visual.start')}</button>
     </div>
   )
 }
 
 // ── Editor screen ─────────────────────────────────────────────────
-function EditorScreen({ editRef, execCmd, onInsert, onClose }) {
+function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
+  const { t } = useLang()
   const [showTablePicker, setShowTablePicker] = useState(false)
+  const [activeFormats, setActiveFormats] = useState({})
+
+  useEffect(() => {
+    const draft = localStorage.getItem(VISUAL_DRAFT_KEY)
+    if (draft && editRef.current) editRef.current.innerHTML = draft
+  }, [editRef])
+
+  const handleInput = useCallback(() => {
+    localStorage.setItem(VISUAL_DRAFT_KEY, editRef.current?.innerHTML || '')
+  }, [editRef])
+
+  const handleClear = useCallback(() => {
+    if (!window.confirm(t('visual.clearConfirm'))) return
+    if (editRef.current) editRef.current.innerHTML = ''
+    localStorage.removeItem(VISUAL_DRAFT_KEY)
+    editRef.current?.focus()
+  }, [editRef, t])
+
+  const updateFormats = useCallback(() => {
+    try {
+      const blockVal = document.queryCommandValue('formatBlock').toLowerCase()
+      const sel = window.getSelection()
+      let inCode = false
+      if (sel && sel.rangeCount > 0) {
+        let node = sel.getRangeAt(0).commonAncestorContainer
+        while (node && node !== editRef.current) {
+          if (node.nodeName === 'CODE') { inCode = true; break }
+          node = node.parentNode
+        }
+      }
+      setActiveFormats({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        strikeThrough: document.queryCommandState('strikeThrough'),
+        insertUnorderedList: document.queryCommandState('insertUnorderedList'),
+        insertOrderedList: document.queryCommandState('insertOrderedList'),
+        h1: blockVal === 'h1', h2: blockVal === 'h2', h3: blockVal === 'h3',
+        blockquote: blockVal === 'blockquote',
+        code: inCode,
+      })
+    } catch {}
+  }, [editRef])
+
+  useEffect(() => {
+    document.addEventListener('selectionchange', updateFormats)
+    return () => document.removeEventListener('selectionchange', updateFormats)
+  }, [updateFormats])
+
+  const isActive = (item) => {
+    if (!item) return false
+    if (item.special === 'code') return !!activeFormats.code
+    if (item.cmd === 'formatBlock') return !!activeFormats[item.val]
+    return !!activeFormats[item.cmd]
+  }
 
   const insertTable = useCallback((rows, cols) => {
     const thCells = Array.from({ length: cols }, (_, i) =>
-      `<th style="border:1px solid var(--border-color,#ccc);padding:6px 10px;background:var(--bg-secondary,#f5f5f7);font-weight:600">列${i + 1}</th>`
+      `<th style="border:1px solid var(--border-color,#ccc);padding:6px 10px;background:var(--bg-secondary,#f5f5f7);font-weight:600">Col${i + 1}</th>`
     ).join('')
     const tdCells = Array.from({ length: cols }, () =>
       `<td style="border:1px solid var(--border-color,#ccc);padding:6px 10px"> </td>`
@@ -193,14 +253,15 @@ function EditorScreen({ editRef, execCmd, onInsert, onClose }) {
     }
     reader.readAsDataURL(file)
   }, [])
+
   return (
     <>
       <div className="vis-header">
-        <span className="vis-header-title">PokerS文档 · 可视化插入</span>
+        <span className="vis-header-title">{t('visual.headerTitle')}</span>
         <button className="modal-close" onClick={onClose}>✕</button>
       </div>
       <div className="vis-toolbar">
-        {VIS_TOOLBAR.map((item, i) =>
+        {visToolbar.map((item, i) =>
           item === null
             ? <span key={i} className="toolbar-sep" />
             : item.special === 'table'
@@ -222,9 +283,9 @@ function EditorScreen({ editRef, execCmd, onInsert, onClose }) {
               : (
                 <button
                   key={i}
-                  className={`tb-btn ${item.cls || ''}`}
+                  className={`tb-btn ${item.cls || ''} ${isActive(item) ? 'active' : ''}`}
                   title={item.title}
-                  onMouseDown={e => { e.preventDefault(); execCmd(item) }}
+                  onMouseDown={e => { e.preventDefault(); execCmd(item); setTimeout(updateFormats, 0) }}
                 >{item.label}</button>
               )
         )}
@@ -234,12 +295,16 @@ function EditorScreen({ editRef, execCmd, onInsert, onClose }) {
         className="vis-content"
         contentEditable
         suppressContentEditableWarning
+        onInput={handleInput}
         onPaste={handlePaste}
-        data-placeholder="在此输入内容，选中文字后点击上方按钮应用格式..."
+        data-placeholder={t('visual.placeholder')}
       />
       <div className="vis-footer">
-        <span className="vis-hint">选中文字 → 点击格式按钮 · 完成后点击右侧按钮插入到编辑器光标处</span>
-        <button className="btn-save" onClick={onInsert}>确认插入 ✓</button>
+        <span className="vis-hint">{t('visual.hint')}</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-cancel" onClick={handleClear}>{t('visual.clear')}</button>
+          <button className="btn-save" onClick={onInsert}>{t('visual.confirm')}</button>
+        </div>
       </div>
     </>
   )
@@ -247,6 +312,7 @@ function EditorScreen({ editRef, execCmd, onInsert, onClose }) {
 
 // ── Mini table grid picker ────────────────────────────────────────
 function TablePicker({ onInsert, onClose }) {
+  const { t } = useLang()
   const [hRow, setHRow] = useState(0)
   const [hCol, setHCol] = useState(0)
   const GRID = 8
@@ -269,7 +335,7 @@ function TablePicker({ onInsert, onClose }) {
         ))}
       </div>
       <div className="vis-table-label">
-        {hRow || 1} 行 × {hCol || 1} 列
+        {hRow || 1} {t('table.rowLabel')} × {hCol || 1} {t('table.colLabel')}
       </div>
     </div>
   )
