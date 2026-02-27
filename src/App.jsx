@@ -14,18 +14,107 @@ const AUTOSAVE_KEY = 'md-editor-autosave'
 
 const DEFAULT_CONTENT = `# 欢迎使用 Markdown Editor
 
-这是一个 **Mac 风格**的 Markdown 编辑器，支持实时预览。
+**Mac 风格** Markdown 编辑器，支持实时预览、可视化插入、数学公式、代码高亮等功能。
 
-## 功能特性
+---
 
-- ✅ 实时分栏预览
-- ✅ 粘贴图片自动转为 Markdown 链接
-- ✅ 代码语法高亮
-- ✅ 数学公式支持（KaTeX）
-- ✅ 暗色 / 亮色主题切换
-- ✅ 文件导入 / 导出
+## 快速上手
 
-## 代码示例
+### 视图模式
+
+顶栏右侧三个按钮切换视图：
+
+| 按钮 | 说明 |
+|------|------|
+| Edit | 仅显示编辑器 |
+| Split | 左右分栏（默认），分割线可拖拽调整宽度 |
+| Preview | 仅显示预览 |
+
+### 快捷键
+
+| 功能 | 快捷键 |
+|------|--------|
+| 保存文件 | Ctrl+S |
+| 加粗 | Ctrl+B |
+| 斜体 | Ctrl+I |
+
+---
+
+## 工具栏
+
+编辑器上方工具栏提供常用格式按钮，**选中文字后点击**即可包裹格式，未选中则插入占位文字。
+
+支持：H1 / H2 / H3、加粗、斜体、删除线、行内代码、引用、代码块、分割线、无序列表、有序列表、任务列表、链接、图片。
+
+---
+
+## ✦ 可视化插入（Word 风格）
+
+点击工具栏 **✦ 可视化插入** 按钮，进入所见即所得编辑模式：
+
+1. 首屏动画确认后进入编辑器
+2. 像 Word 一样输入内容，**选中文字后点击格式按钮**应用样式
+3. 支持插入表格（网格选择行列数）、图片（URL / 本地上传 / 直接粘贴截图）
+4. 点击右下角 **确认插入 ✓**，内容自动转为 Markdown 并插入到编辑器光标处
+
+---
+
+## ⊞ 表格构建器
+
+点击工具栏 **⊞ 表格** 按钮：
+
+1. 在网格上悬停选择行列数，或手动输入
+2. 点击「下一步」填写表头和内容
+3. 点击「插入表格」生成 Markdown 表格
+
+---
+
+## ∑ 数学公式库
+
+点击工具栏 **∑ 公式** 按钮，从希腊字母、运算符、常用表达式、公式模板中选择插入。
+
+行内公式示例：$E = mc^2$
+
+块级公式示例：
+
+$$
+\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
+$$
+
+---
+
+## 图片插入
+
+三种方式均支持：
+
+- **粘贴截图**：在编辑器中直接 Ctrl+V，自动转为 Base64 内嵌
+- **工具栏图片按钮**：插入图片 URL
+- **⚙️ 设置**：可切换为本地文件引用模式（\`./images/xxx.png\`）
+
+---
+
+## 导出与复制
+
+| 按钮 | 功能 |
+|------|------|
+| Export | 导出为独立 HTML 文件（含代码高亮样式） |
+| Copy | 复制带样式富文本，可直接粘贴到微信公众号编辑器 |
+| Save | 下载 .md 文件（Ctrl+S） |
+| Open | 打开本地 .md / .txt 文件 |
+
+---
+
+## 其他功能
+
+- **⊞ / ⊡ 专注模式**：隐藏工具栏，减少干扰
+- **🌙 / ☀️ 主题切换**：亮色 / 暗色
+- **自动保存**：内容每隔 1 秒自动保存到浏览器本地，刷新后自动恢复
+- **Reset**：清空所有本地数据，恢复初始状态（操作前有确认提示）
+- **Guide**：查看完整 Markdown 语法参考与功能说明
+
+---
+
+## 代码高亮示例
 
 \`\`\`javascript
 function hello(name) {
@@ -34,25 +123,7 @@ function hello(name) {
 hello('World')
 \`\`\`
 
-## 数学公式
-
-行内公式：$E = mc^2$
-
-块级公式：
-
-$$
-\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
-$$
-
-## 表格
-
-| 功能 | 快捷键 |
-|------|--------|
-| 加粗 | Cmd+B |
-| 斜体 | Cmd+I |
-| 保存 | Cmd+S |
-
-> 提示：直接粘贴图片即可自动插入 Markdown 图片链接！
+> 开始编辑吧，左侧写 Markdown，右侧实时预览。
 `
 
 export default function App() {
@@ -122,6 +193,19 @@ export default function App() {
   const handleSaveUploadConfig = useCallback((config) => {
     setUploadConfig(config)
     localStorage.setItem(UPLOAD_CONFIG_KEY, JSON.stringify(config))
+  }, [])
+
+  const handleReset = useCallback(() => {
+    if (!window.confirm('确定要清空所有本地数据并恢复初始状态吗？')) return
+    localStorage.removeItem(AUTOSAVE_KEY)
+    localStorage.removeItem(UPLOAD_CONFIG_KEY)
+    localStorage.removeItem('md-editor-img-hint-dismissed')
+    setContent(DEFAULT_CONTENT)
+    setTheme('light')
+    setFileName('Untitled.md')
+    setUploadConfig({ service: 'base64' })
+    setShowHint(true)
+    setLastSaved(null)
   }, [])
 
   const handleSave = useCallback(() => {
@@ -236,6 +320,7 @@ export default function App() {
           >✎</button>
         </div>
         <div className="title-bar-actions">
+          <button className="view-btn" onClick={handleReset} title="清空本地数据，恢复初始状态">Reset</button>
           <button className="view-btn" onClick={() => setShowGuide(true)} title="使用指南">Guide</button>
           <button className="view-btn" onClick={handleOpen} title="打开文件">Open</button>
           <button className="view-btn" onClick={handleSave} title="保存 (Cmd+S)">Save</button>

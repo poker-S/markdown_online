@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import MathPanel from './MathPanel.jsx'
 import TableBuilder from './TableBuilder.jsx'
+import VisualEditor from './VisualEditor.jsx'
 
 const TOOLBAR_ITEMS = [
   {
@@ -83,6 +84,7 @@ function insertBlock(view, start, end) {
 export default function Toolbar({ editorViewRef }) {
   const [showMath, setShowMath] = useState(false)
   const [showTable, setShowTable] = useState(false)
+  const [showVisual, setShowVisual] = useState(false)
 
   const handleAction = useCallback((item) => {
     const view = editorViewRef.current
@@ -123,6 +125,7 @@ export default function Toolbar({ editorViewRef }) {
           <span className="toolbar-sep" />
           <button className="tb-btn" title="插入表格" onMouseDown={(e) => { e.preventDefault(); setShowTable(true) }}>⊞ 表格</button>
           <button className="tb-btn" title="数学公式库" onMouseDown={(e) => { e.preventDefault(); setShowMath(true) }}>∑ 公式</button>
+          <button className="tb-btn" title="可视化插入（Word 风格编辑）" onMouseDown={(e) => { e.preventDefault(); setShowVisual(true) }}>✦ 可视化插入</button>
         </div>
       </div>
       {showMath && (
@@ -135,6 +138,12 @@ export default function Toolbar({ editorViewRef }) {
         <TableBuilder
           onInsert={(text) => { insertText(editorViewRef.current, text); setShowTable(false) }}
           onClose={() => setShowTable(false)}
+        />
+      )}
+      {showVisual && (
+        <VisualEditor
+          editorViewRef={editorViewRef}
+          onClose={() => setShowVisual(false)}
         />
       )}
     </>

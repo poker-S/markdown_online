@@ -101,6 +101,10 @@ const FEATURES = [
     title: '自动保存',
     desc: '内容每隔 1 秒自动保存到浏览器本地存储，刷新页面后自动恢复上次内容。'
   },
+  {
+    title: 'Reset — 恢复初始状态',
+    desc: '点击顶栏「Reset」按钮，清空浏览器本地存储的所有数据（包括编辑内容、文件名、主题、图片设置），恢复到初次打开时的默认状态。操作前会弹出确认框，确认后不可撤销。'
+  },
 ]
 
 export default function GuidePanel({ onClose }) {
