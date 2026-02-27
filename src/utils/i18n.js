@@ -6,7 +6,10 @@ export const translations = {
       open: '打开', openTitle: '打开文件',
       save: '保存', saveTitle: '保存 (Ctrl+S)',
       export: '导出', exportTitle: '导出 HTML',
-      copy: '复制', copyTitle: '复制富文本（微信公众号）',
+      copy: '复制', copyTitle: '复制内容',
+      copyWechat: '微信公众号',
+      copy52pojie: '52pojie BBCode',
+      copy52pojieSuccess: '已复制 BBCode，在52pojie编辑器切换到「源码」模式后粘贴',
       edit: '编辑', split: '分栏', preview: '预览',
       settingsTitle: '图片上传设置',
       focusEnter: '进入专注模式', focusExit: '退出专注模式',
@@ -63,6 +66,7 @@ export const translations = {
       insertMode: '插入方式：',
       inline: '行内（嵌入文字中）', block: '独立成行（居中展示）',
       greek: '希腊字母', operators: '运算符', expressions: '常用表达式', templates: '公式模板',
+      templateLabels: ['一元二次方程', '欧拉公式', '勾股定理', '正态分布', '泰勒展开', '傅里叶变换'],
     },
     table: {
       selectTitle: '选择表格大小', editTitle: (r, c) => `编辑表格（${r} 行 × ${c} 列）`,
@@ -83,6 +87,7 @@ export const translations = {
         h1: 'H1', h1t: '一级标题', h2: 'H2', h2t: '二级标题', h3: 'H3', h3t: '三级标题',
         bold: 'B', boldt: '加粗', italic: 'I', italict: '斜体',
         strike: 'S', striket: '删除线', code: '`', codet: '行内代码',
+        codeLang: '语言（如 javascript）', codePlaceholder: '在此输入代码...',
         quote: '❝', quotet: '引用', ul: '• 列表', ult: '无序列表',
         ol: '1. 列表', olt: '有序列表', link: '🔗 链接', linkt: '插入链接',
         table: '🔲 表格', tablet: '插入表格',
@@ -94,6 +99,22 @@ export const translations = {
       title: '使用指南',
       syntaxTitle: 'Markdown 语法',
       featuresTitle: '编辑器功能',
+      aboutTitle: '关于',
+      changelogTitle: '更新日志',
+      changelog: [
+        { ver: 'v1.2.0', date: '2026-02-28', items: [
+          'Copy ▾ 下拉菜单：微信公众号富文本 / 52pojie BBCode 两种复制方式',
+          '52pojie BBCode 转换器：支持表格、代码高亮（[mw_shl_code]）',
+          '数学公式库：模板标签中文化（一元二次方程、欧拉公式等）',
+          '可视化插入：代码块新增弹出输入框，支持语言选择',
+          '修复：可视化插入引用块 / 行内代码无法 toggle 取消',
+          'Guide 面板：新增关于区块（GitHub + 微信公众号）、内容更新',
+        ]},
+        { ver: 'v1.1.0', date: '2026-02-27', items: [
+          '中英文双语界面，可在 ⚙️ 设置中切换',
+          '可视化插入：格式按钮激活状态、清空按钮、草稿本地存储',
+        ]},
+      ],
       sections: [
         { title: '标题', items: [
           { syntax: '# 一级标题', desc: 'H1 大标题' },
@@ -136,9 +157,12 @@ export const translations = {
         { title: '⊞ 表格构建器', desc: '点击工具栏「⊞ 表格」按钮，可视化设置行列数和对齐方式，自动生成表格 Markdown。' },
         { title: '∑ 数学公式库', desc: '点击工具栏「∑ 公式」按钮，从常用公式库中选择并插入，无需手写 LaTeX。' },
         { title: '✦ 可视化插入', desc: '点击工具栏「✦ 可视化插入」按钮，进入 Word 风格所见即所得编辑器。选中文字后点击格式按钮应用样式，支持表格、图片插入，完成后自动转为 Markdown 插入到光标处。' },
-        { title: '粘贴图片', desc: '直接在编辑器中 Ctrl+V 粘贴截图或图片，自动上传并插入 Markdown 图片链接。点击 ⚙️ 可配置上传服务（Base64 / 自定义接口）。' },
-        { title: 'Copy — 复制富文本', desc: '点击顶栏「Copy」按钮，将预览内容复制为带样式的富文本，可直接粘贴到微信公众号编辑器等富文本平台。' },
-        { title: 'Export — 导出 HTML', desc: '点击顶栏「Export」按钮，将当前预览导出为独立 HTML 文件，包含代码高亮样式。' },
+        { title: '粘贴图片', desc: '直接在编辑器中 Ctrl+V 粘贴截图或图片，自动上传并插入 Markdown 图片链接。点击 ⚙️ 可配置存储方式（Base64 内嵌 / 本地文件引用）。' },
+        { title: 'Copy ▾ — 复制内容', desc: '点击顶栏「Copy ▾」展开下拉菜单，选择复制方式：\n• 微信公众号：复制带样式的富文本，可直接粘贴到微信公众号编辑器。\n• 52pojie BBCode：复制 BBCode 格式文本，粘贴到吾爱破解论坛编辑器「源码」模式即可发帖，支持代码高亮和表格。' },
+        { title: 'Export — 导出 HTML', desc: '点击顶栏「Export」按钮，将当前预览导出为独立 HTML 文件，包含代码高亮样式，可直接在浏览器中打开。' },
+        { title: '文件操作', desc: '• Open：打开本地 .md / .txt 文件载入编辑器。\n• Save（Ctrl+S）：将当前内容下载为 .md 文件。\n• 文件名旁的 ✎ 按钮：重命名文件。' },
+        { title: '⚙️ 设置', desc: '配置图片存储方式（Base64 内嵌或本地文件引用）和界面语言（中文 / English）。' },
+        { title: '主题切换', desc: '点击顶栏 🌙 / ☀️ 按钮，在深色和浅色主题之间切换，偏好自动保存。' },
         { title: '分栏拖拽', desc: '在 Split 模式下，拖动编辑区与预览区之间的分割线，可自由调整两侧宽度比例。' },
         { title: '专注模式', desc: '点击顶栏「⊞」按钮进入专注模式，隐藏工具栏，预览区居中显示，减少干扰。' },
         { title: '快捷键', desc: 'Ctrl+S 保存文件\nCtrl+B 加粗\nCtrl+I 斜体' },
@@ -161,7 +185,7 @@ export const translations = {
 | ⊞ 表格 | 可视化表格构建器 |
 | ∑ 公式 | 数学公式库 |
 | Export | 导出 HTML 文件 |
-| Copy | 复制富文本（微信公众号） |
+| Copy ▾ | 下拉选择：微信公众号富文本 / 52pojie BBCode |
 | Reset | 清空本地数据，恢复初始状态 |
 
 ## 快捷键
@@ -198,7 +222,10 @@ function hello(name) {
       open: 'Open', openTitle: 'Open file',
       save: 'Save', saveTitle: 'Save (Ctrl+S)',
       export: 'Export', exportTitle: 'Export HTML',
-      copy: 'Copy', copyTitle: 'Copy rich text',
+      copy: 'Copy', copyTitle: 'Copy',
+      copyWechat: 'WeChat',
+      copy52pojie: '52pojie BBCode',
+      copy52pojieSuccess: 'BBCode copied. Paste in 52pojie editor source mode.',
       edit: 'Edit', split: 'Split', preview: 'Preview',
       settingsTitle: 'Image Upload Settings',
       focusEnter: 'Enter focus mode', focusExit: 'Exit focus mode',
@@ -255,6 +282,7 @@ function hello(name) {
       insertMode: 'Insert as:',
       inline: 'Inline (within text)', block: 'Block (centered)',
       greek: 'Greek Letters', operators: 'Operators', expressions: 'Expressions', templates: 'Templates',
+      templateLabels: ['Quadratic', "Euler's", 'Pythagorean', 'Normal dist', 'Taylor', 'Fourier'],
     },
     table: {
       selectTitle: 'Select Table Size', editTitle: (r, c) => `Edit Table (${r} rows × ${c} cols)`,
@@ -275,6 +303,7 @@ function hello(name) {
         h1: 'H1', h1t: 'Heading 1', h2: 'H2', h2t: 'Heading 2', h3: 'H3', h3t: 'Heading 3',
         bold: 'B', boldt: 'Bold', italic: 'I', italict: 'Italic',
         strike: 'S', striket: 'Strikethrough', code: '`', codet: 'Inline code',
+        codeLang: 'Language (e.g. javascript)', codePlaceholder: 'Enter code here...',
         quote: '❝', quotet: 'Blockquote', ul: '• List', ult: 'Unordered list',
         ol: '1. List', olt: 'Ordered list', link: '🔗 Link', linkt: 'Insert link',
         table: '🔲 Table', tablet: 'Insert table',
@@ -286,6 +315,22 @@ function hello(name) {
       title: 'User Guide',
       syntaxTitle: 'Markdown Syntax',
       featuresTitle: 'Editor Features',
+      aboutTitle: 'About',
+      changelogTitle: 'Changelog',
+      changelog: [
+        { ver: 'v1.2.0', date: '2026-02-28', items: [
+          'Copy ▾ dropdown: WeChat rich text / 52pojie BBCode options',
+          '52pojie BBCode converter: tables, code highlight ([mw_shl_code])',
+          'Math panel: template labels localized in Chinese mode',
+          'Visual Insert: code block popup with language selector',
+          'Fix: blockquote / inline code toggle off in Visual Insert',
+          'Guide panel: About section (GitHub + WeChat), content updated',
+        ]},
+        { ver: 'v1.1.0', date: '2026-02-27', items: [
+          'i18n: Chinese/English UI, switchable in ⚙️ Settings',
+          'Visual Insert: active format indicators, clear button, draft persistence',
+        ]},
+      ],
       sections: [
         { title: 'Headings', items: [
           { syntax: '# Heading 1', desc: 'H1 large heading' },
@@ -329,8 +374,11 @@ function hello(name) {
         { title: '∑ Formula Library', desc: 'Click "∑ Formula" to pick from a library of common math expressions. No LaTeX knowledge needed.' },
         { title: '✦ Visual Insert', desc: 'Click "✦ Visual Insert" for a Word-style WYSIWYG editor. Select text and click format buttons to apply styles. Supports tables and images. Converts to Markdown on insert.' },
         { title: 'Paste Image', desc: 'Ctrl+V paste a screenshot directly into the editor. It is auto-converted and inserted as a Markdown image link. Configure storage in ⚙️ Settings.' },
-        { title: 'Copy — Rich Text', desc: 'Click "Copy" to copy the preview as styled rich text, ready to paste into WeChat Official Account editor or any rich-text platform.' },
-        { title: 'Export — HTML', desc: 'Click "Export" to download the current preview as a standalone HTML file with syntax highlighting.' },
+        { title: 'Copy ▾ — Copy Content', desc: 'Click "Copy ▾" to open a dropdown with two options:\n• WeChat: copies styled rich text, ready to paste into WeChat Official Account editor.\n• 52pojie BBCode: copies BBCode text; paste into the 52pojie forum editor in source mode. Supports code highlighting and tables.' },
+        { title: 'Export — HTML', desc: 'Click "Export" to download the current preview as a standalone HTML file with syntax highlighting, openable in any browser.' },
+        { title: 'File Operations', desc: '• Open: load a local .md / .txt file into the editor.\n• Save (Ctrl+S): download current content as a .md file.\n• ✎ next to the filename: rename the file.' },
+        { title: '⚙️ Settings', desc: 'Configure image storage (inline Base64 or local file reference) and interface language (中文 / English).' },
+        { title: 'Theme Toggle', desc: 'Click 🌙 / ☀️ in the top bar to switch between dark and light themes. Your preference is saved automatically.' },
         { title: 'Split Drag', desc: 'In Split mode, drag the divider between editor and preview to adjust the width ratio.' },
         { title: 'Focus Mode', desc: 'Click "⊞" to enter focus mode — hides the toolbar and centers the preview for distraction-free writing.' },
         { title: 'Shortcuts', desc: 'Ctrl+S  Save\nCtrl+B  Bold\nCtrl+I  Italic' },
@@ -353,7 +401,7 @@ A **Mac-style** Markdown editor with live preview, visual insert, math formulas,
 | ⊞ Table | Visual table builder |
 | ∑ Formula | Math formula library |
 | Export | Download as HTML |
-| Copy | Copy rich text (for WeChat, Notion, etc.) |
+| Copy ▾ | Dropdown: WeChat rich text / 52pojie BBCode |
 | Reset | Clear local data and restore defaults |
 
 ## Shortcuts

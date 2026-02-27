@@ -11,6 +11,12 @@ function nodeToMd(node) {
   const inner = () => Array.from(node.childNodes).map(nodeToMd).join('')
   switch (tag) {
     case 'br': return '\n'
+    case 'pre': {
+      const codeEl = node.querySelector('code')
+      const lang = node.getAttribute('data-lang') || ''
+      const text = (codeEl ? codeEl.textContent : node.textContent).trimEnd()
+      return `\`\`\`${lang}\n${text}\n\`\`\`\n\n`
+    }
     case 'b': case 'strong': return `**${inner()}**`
     case 'i': case 'em': return `*${inner()}*`
     case 's': case 'del': case 'strike': return `~~${inner()}~~`
@@ -103,8 +109,23 @@ export default function VisualEditor({ editorViewRef, onClose }) {
       return
     } else if (item.special === 'code') {
       const sel = window.getSelection()
-      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-        const range = sel.getRangeAt(0)
+      if (!sel || sel.rangeCount === 0) { editRef.current?.focus(); return }
+      const range = sel.getRangeAt(0)
+      // Walk up to find enclosing <code>
+      let cur = range.commonAncestorContainer
+      if (cur.nodeType === 3) cur = cur.parentNode
+      let codeEl = null
+      while (cur && cur !== editRef.current) {
+        if (cur.nodeName === 'CODE') { codeEl = cur; break }
+        cur = cur.parentNode
+      }
+      if (codeEl) {
+        // Toggle off: unwrap
+        const parent = codeEl.parentNode
+        while (codeEl.firstChild) parent.insertBefore(codeEl.firstChild, codeEl)
+        parent.removeChild(codeEl)
+      } else if (!sel.isCollapsed) {
+        // Toggle on: wrap selection
         const code = document.createElement('code')
         try { range.surroundContents(code) }
         catch {
@@ -113,6 +134,13 @@ export default function VisualEditor({ editorViewRef, onClose }) {
           range.insertNode(code)
         }
         sel.removeAllRanges()
+      }
+    } else if (item.val === 'blockquote') {
+      const blockVal = document.queryCommandValue('formatBlock').toLowerCase()
+      if (blockVal === 'blockquote') {
+        document.execCommand('formatBlock', false, 'p')
+      } else {
+        document.execCommand('formatBlock', false, 'blockquote')
       }
     } else if (item.val) {
       document.execCommand(item.cmd, false, item.val)
@@ -171,6 +199,7 @@ function IntroScreen({ onConfirm, onClose }) {
 function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
   const { t } = useLang()
   const [showTablePicker, setShowTablePicker] = useState(false)
+  const [showCodePicker, setShowCodePicker] = useState(false)
   const [activeFormats, setActiveFormats] = useState({})
 
   useEffect(() => {
@@ -226,6 +255,17 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
     return !!activeFormats[item.cmd]
   }
 
+  const insertCodeBlock = useCallback((lang, code) => {
+    const escaped = code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+    const html = `<pre data-lang="${lang}"><code>${escaped}</code></pre><p><br></p>`
+    editRef.current?.focus()
+    document.execCommand('insertHTML', false, html)
+    setShowCodePicker(false)
+  }, [editRef])
+
   const insertTable = useCallback((rows, cols) => {
     const thCells = Array.from({ length: cols }, (_, i) =>
       `<th style="border:1px solid var(--border-color,#ccc);padding:6px 10px;background:var(--bg-secondary,#f5f5f7);font-weight:600">Col${i + 1}</th>`
@@ -280,6 +320,31 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
                   )}
                 </div>
               )
+              : item.special === 'code'
+              ? (
+                <div key={i} style={{ position: 'relative' }}>
+                  <button
+                    className={`tb-btn ${item.cls || ''} ${isActive(item) ? 'active' : ''}`}
+                    title={item.title}
+                    onMouseDown={e => {
+                      e.preventDefault()
+                      const sel = window.getSelection()
+                      if (sel && !sel.isCollapsed) {
+                        execCmd(item)
+                        setTimeout(updateFormats, 0)
+                      } else {
+                        setShowCodePicker(v => !v)
+                      }
+                    }}
+                  >{item.label}</button>
+                  {showCodePicker && (
+                    <CodeBlockPicker
+                      onInsert={insertCodeBlock}
+                      onClose={() => setShowCodePicker(false)}
+                    />
+                  )}
+                </div>
+              )
               : (
                 <button
                   key={i}
@@ -307,6 +372,43 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
         </div>
       </div>
     </>
+  )
+}
+
+// ── Code block picker ─────────────────────────────────────────────
+function CodeBlockPicker({ onInsert, onClose }) {
+  const { t } = useLang()
+  const [lang, setLang] = useState('javascript')
+  const [code, setCode] = useState('')
+  const taRef = useRef(null)
+
+  useEffect(() => { taRef.current?.focus() }, [])
+
+  return (
+    <div className="vis-code-picker" onMouseDown={e => e.stopPropagation()}>
+      <input
+        className="vis-code-lang"
+        value={lang}
+        onChange={e => setLang(e.target.value)}
+        placeholder={t('visual.tb.codeLang')}
+        spellCheck={false}
+      />
+      <textarea
+        ref={taRef}
+        className="vis-code-textarea"
+        value={code}
+        onChange={e => setCode(e.target.value)}
+        placeholder={t('visual.tb.codePlaceholder')}
+        onKeyDown={e => { if (e.key === 'Escape') onClose() }}
+        spellCheck={false}
+      />
+      <div className="vis-code-actions">
+        <button className="btn-cancel" onMouseDown={e => { e.preventDefault(); onClose() }}>✕</button>
+        <button className="btn-save" onMouseDown={e => { e.preventDefault(); if (code.trim()) onInsert(lang.trim(), code) }}>
+          {t('visual.confirm')}
+        </button>
+      </div>
+    </div>
   )
 }
 

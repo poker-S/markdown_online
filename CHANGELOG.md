@@ -4,7 +4,64 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.2.0] - 2026-02-28
+
+### 新功能 / New Features
+
+- **Copy ▾ 下拉菜单 / Copy Dropdown**
+  Copy 按钮改为下拉菜单，提供两种复制方式：微信公众号富文本、52pojie BBCode。
+  Copy button is now a dropdown with two options: WeChat rich text and 52pojie BBCode.
+
+- **52pojie BBCode 转换器 / BBCode Converter**
+  新增 HTML → BBCode 转换器，支持表格（`[table][tr][td]`）、代码高亮（`[mw_shl_code=lang,true]`）、标题、加粗、链接、图片等。
+  New HTML→BBCode converter supporting tables, syntax-highlighted code blocks, headings, bold, links, images, and more.
+
+- **数学公式库中文化 / Math Panel Localization**
+  公式模板标签在中文模式下显示中文名称（一元二次方程、欧拉公式、勾股定理等）。
+  Formula template labels now display in Chinese when the UI language is set to Chinese.
+
+- **可视化插入 · 代码块输入框 / Visual Insert · Code Block Popup**
+  无选中文字时点击代码按钮，弹出代码输入框，可填写语言和代码内容后插入为围栏代码块。
+  Clicking the code button with no selection now opens a popup to enter language and code, inserting a fenced code block.
+
+- **Guide 面板更新 / Guide Panel Update**
+  新增「关于」区块，包含 GitHub 仓库链接和微信公众号信息；功能说明同步更新。
+  Added "About" section with GitHub repo link and WeChat account; feature descriptions updated.
+
+### Bug 修复 / Bug Fixes
+
+- 修复可视化插入中引用块无法 toggle 取消的问题
+  Fixed: blockquote in Visual Insert could not be toggled off
+
+- 修复可视化插入中行内代码无法 toggle 取消的问题
+  Fixed: inline code in Visual Insert could not be toggled off
+
+---
+
 ## [v1.1.0] - 2026-02-27
+
+### 新功能 / New Features
+
+- **中英文双语界面 / i18n Support**
+- **可视化插入 · 格式按钮激活状态 / Visual Insert · Active Format Indicators**
+- **可视化插入 · 清空按钮 / Visual Insert · Clear Button**
+- **可视化插入 · 草稿本地存储 / Visual Insert · Draft Persistence**
+
+### Bug 修复 / Bug Fixes
+
+- 修复语言切换后默认欢迎内容未同步更新的问题
+- 修复编辑器空白行光标不显示的问题
+- 修复可视化插入点击「开始使用」后出现白屏的问题
+- 修复格式按钮在无文字选中状态下无法取消激活的问题
+- 修复点击可视化插入弹窗外部区域意外关闭弹窗的问题
+
+---
+
+## [v1.0.0] - Initial Release
+
+初始版本发布。
+Initial release.
+
 
 ### 新功能 / New Features
 

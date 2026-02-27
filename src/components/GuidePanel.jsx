@@ -38,6 +38,32 @@ export default function GuidePanel({ onClose }) {
               </div>
             ))}
           </section>
+          <section className="guide-section">
+            <h3 className="guide-section-title">{t('guide.changelogTitle')}</h3>
+            {t('guide.changelog').map((entry, i) => (
+              <div key={i} className="guide-changelog-version">
+                <div className="guide-changelog-header">
+                  <span className="guide-changelog-ver">{entry.ver}</span>
+                  <span className="guide-changelog-date">{entry.date}</span>
+                </div>
+                <ul className="guide-changelog-list">
+                  {entry.items.map((item, j) => <li key={j}>{item}</li>)}
+                </ul>
+              </div>
+            ))}
+          </section>
+
+          <section className="guide-section guide-about">
+            <h3 className="guide-section-title">{t('guide.aboutTitle')}</h3>
+            <div className="guide-about-links">
+              <a href="https://github.com/poker-S/markdown_online" target="_blank" rel="noopener noreferrer" className="guide-about-link">
+                <span className="guide-about-icon">⭐</span> GitHub 开源仓库
+              </a>
+              <span className="guide-about-link guide-about-wechat">
+                <span className="guide-about-icon">📱</span> 微信公众号搜索虫队长
+              </span>
+            </div>
+          </section>
         </div>
       </div>
     </>

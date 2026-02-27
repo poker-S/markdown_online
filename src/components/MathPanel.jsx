@@ -65,6 +65,15 @@ export default function MathPanel({ onInsert, onClose }) {
     onInsert(text)
   }
 
+  const templateLabels = t('math.templateLabels')
+  const categories = MATH_CATEGORIES_DATA.map((cat, i) => {
+    if (cat.key !== 'templates') return cat
+    return {
+      ...cat,
+      items: cat.items.map((item, j) => ({ ...item, label: templateLabels[j] ?? item.label }))
+    }
+  })
+
   const categoryNames = [t('math.greek'), t('math.operators'), t('math.expressions'), t('math.templates')]
 
   return (
@@ -81,14 +90,14 @@ export default function MathPanel({ onInsert, onClose }) {
             <button className={`view-btn ${mode === 'block' ? 'active' : ''}`} onClick={() => setMode('block')}>{t('math.block')}</button>
           </div>
           <div style={{ display: 'flex', gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
-            {MATH_CATEGORIES_DATA.map((cat, i) => (
+            {categories.map((cat, i) => (
               <button key={i} className={`view-btn ${activeTab === i ? 'active' : ''}`} onClick={() => setActiveTab(i)}>
                 {categoryNames[i]}
               </button>
             ))}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {MATH_CATEGORIES_DATA[activeTab].items.map((item, i) => (
+            {categories[activeTab].items.map((item, i) => (
               <button key={i} className="tb-btn" title={item.latex} onClick={() => handleInsert(item.latex)} style={{ minWidth: 48, fontSize: 15 }}>
                 {item.label}
               </button>

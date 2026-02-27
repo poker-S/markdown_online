@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import DOMPurify from 'dompurify'
 import { inlineStylesForWechat } from './utils/inlineStyles.js'
+import { htmlToBBCode } from './utils/bbcode.js'
 import { LangContext } from './utils/LangContext.jsx'
 import { translations } from './utils/i18n.js'
 import Toolbar from './components/Toolbar.jsx'
@@ -48,8 +49,10 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem(UPLOAD_CONFIG_KEY)) || { service: 'base64' } }
     catch { return { service: 'base64' } }
   })
+  const [showCopyMenu, setShowCopyMenu] = useState(false)
   const editorViewRef = useRef(null)
   const containerRef = useRef(null)
+  const copyMenuRef = useRef(null)
   const isDragging = useRef(false)
 
   const prevLangRef = useRef(lang)
@@ -179,6 +182,26 @@ export default function App() {
     }
   }, [tr])
 
+  const handleCopy52pojie = useCallback(async () => {
+    const previewEl = document.querySelector('.preview-content')
+    if (!previewEl) return
+    const bbcode = htmlToBBCode(previewEl.innerHTML)
+    const msg = t('app.copy52pojieSuccess')
+    try {
+      await navigator.clipboard.writeText(bbcode)
+      alert(msg)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = bbcode
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      alert(msg)
+    }
+  }, [t])
+
   const handleExportHtml = useCallback(() => {
     import('./components/Preview.jsx').then(() => {
       const previewEl = document.querySelector('.preview-content')
@@ -204,6 +227,15 @@ export default function App() {
       URL.revokeObjectURL(url)
     })
   }, [fileName])
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (copyMenuRef.current && !copyMenuRef.current.contains(e.target))
+        setShowCopyMenu(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -244,7 +276,25 @@ export default function App() {
             <button className="view-btn" onClick={handleOpen} title={t('app.openTitle')}>{t('app.open')}</button>
             <button className="view-btn" onClick={handleSave} title={t('app.saveTitle')}>{t('app.save')}</button>
             <button className="view-btn" onClick={handleExportHtml} title={t('app.exportTitle')}>{t('app.export')}</button>
-            <button className="view-btn" onClick={handleCopyRich} title={t('app.copyTitle')}>{t('app.copy')}</button>
+            <div className="copy-dropdown" ref={copyMenuRef}>
+              <button
+                className="view-btn"
+                title={t('app.copyTitle')}
+                onClick={() => setShowCopyMenu(v => !v)}
+              >
+                {t('app.copy')} ▾
+              </button>
+              {showCopyMenu && (
+                <div className="copy-menu">
+                  <button className="copy-menu-item" onClick={() => { handleCopyRich(); setShowCopyMenu(false) }}>
+                    {t('app.copyWechat')}
+                  </button>
+                  <button className="copy-menu-item" onClick={() => { handleCopy52pojie(); setShowCopyMenu(false) }}>
+                    {t('app.copy52pojie')}
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="view-mode-group">
               <button className={`view-btn ${viewMode === 'editor' ? 'active' : ''}`} onClick={() => setViewMode('editor')}>{t('app.edit')}</button>
               <button className={`view-btn ${viewMode === 'split' ? 'active' : ''}`} onClick={() => setViewMode('split')}>{t('app.split')}</button>

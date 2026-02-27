@@ -756,6 +756,69 @@ html, body, #root {
   white-space: pre-line;
 }
 
+.guide-about-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guide-about-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+a.guide-about-link:hover { color: var(--accent); }
+
+/* ===== Changelog ===== */
+.guide-changelog-version {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+}
+
+.guide-changelog-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.guide-changelog-ver {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.guide-changelog-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.guide-changelog-list {
+  padding-left: 1.2em;
+  margin: 0;
+}
+
+.guide-changelog-list li {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 2px 0;
+}
+
+.guide-about-wechat { cursor: default; }
+
+.guide-about-icon { font-size: 15px; }
+
 /* ===== Visual Editor Modal ===== */
 .vis-modal {
   position: relative;
@@ -924,6 +987,69 @@ html, body, #root {
   color: var(--text-muted);
 }
 
+/* ── Code block picker ── */
+.vis-code-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 300px;
+}
+
+.vis-code-lang {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.vis-code-textarea {
+  width: 100%;
+  height: 140px;
+  padding: 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.vis-code-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* pre block inside vis-content */
+.vis-content pre {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 6px 0;
+}
+
 /* ── Table picker ── */
 .vis-table-picker {
   position: absolute;
@@ -959,4 +1085,38 @@ html, body, #root {
   color: var(--text-secondary);
   text-align: center;
 }
+
+/* ===== Copy Dropdown ===== */
+.copy-dropdown {
+  position: relative;
+}
+
+.copy-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  z-index: 500;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.copy-menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.copy-menu-item:hover { background: var(--bg-secondary); }
+.copy-menu-item + .copy-menu-item { border-top: 1px solid var(--border-light); }
 
