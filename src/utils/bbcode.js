@@ -68,7 +68,7 @@ function processNode(node) {
 
     case 'ul': {
       const items = Array.from(node.querySelectorAll(':scope > li'))
-      return items.map(li => `• ${processChildren(li)}\n`).join('') + '\n'
+      return items.map(li => `\u2022 ${processChildren(li)}\n`).join('') + '\n'
     }
 
     case 'ol': {

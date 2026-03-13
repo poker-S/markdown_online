@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.2.1] - 2026-03-13
+
+### Bug 修复 / Bug Fixes
+
+- 修复52pojie BBCode转换器中无序列表渲染失败显示为HTML实体 `&#8226;` 的问题
+  Fixed: unordered lists in 52pojie BBCode converter displaying as HTML entity `&#8226;` instead of bullet points
+
+---
+
 ## [v1.2.0] - 2026-02-28
 
 ### 新功能 / New Features
