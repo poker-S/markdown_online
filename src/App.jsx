@@ -11,6 +11,7 @@ import StatusBar from './components/StatusBar.jsx'
 import Settings from './components/Settings.jsx'
 import ImageModeHint, { shouldShowHint } from './components/ImageModeHint.jsx'
 import GuidePanel from './components/GuidePanel.jsx'
+import { getDefaultUploadConfig, normalizeUploadConfig } from './utils/imageUpload.js'
 
 const UPLOAD_CONFIG_KEY = 'md-editor-upload-config'
 const AUTOSAVE_KEY = 'md-editor-autosave'
@@ -46,8 +47,11 @@ export default function App() {
   const [showHint, setShowHint] = useState(() => shouldShowHint())
   const [lastSaved, setLastSaved] = useState(saved.content != null ? Date.now() : null)
   const [uploadConfig, setUploadConfig] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(UPLOAD_CONFIG_KEY)) || { service: 'base64' } }
-    catch { return { service: 'base64' } }
+    try {
+      return normalizeUploadConfig(JSON.parse(localStorage.getItem(UPLOAD_CONFIG_KEY)) || getDefaultUploadConfig())
+    } catch {
+      return getDefaultUploadConfig()
+    }
   })
   const [showCopyMenu, setShowCopyMenu] = useState(false)
   const editorViewRef = useRef(null)
@@ -112,8 +116,9 @@ export default function App() {
   }, [splitRatio])
 
   const handleSaveUploadConfig = useCallback((config) => {
-    setUploadConfig(config)
-    localStorage.setItem(UPLOAD_CONFIG_KEY, JSON.stringify(config))
+    const normalized = normalizeUploadConfig(config)
+    setUploadConfig(normalized)
+    localStorage.setItem(UPLOAD_CONFIG_KEY, JSON.stringify(normalized))
   }, [])
 
   const handleReset = useCallback(() => {
@@ -124,7 +129,7 @@ export default function App() {
     setContent(tr.defaultContent)
     setTheme('light')
     setFileName('Untitled.md')
-    setUploadConfig({ service: 'base64' })
+    setUploadConfig(getDefaultUploadConfig())
     setShowHint(true)
     setLastSaved(null)
   }, [tr])
@@ -312,7 +317,7 @@ export default function App() {
 
         {/* Toolbar */}
         {!isFocusMode && (
-          <Toolbar editorViewRef={editorViewRef} theme={theme} />
+          <Toolbar editorViewRef={editorViewRef} theme={theme} uploadConfig={uploadConfig} />
         )}
 
         {/* Main Content */}

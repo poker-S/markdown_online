@@ -82,7 +82,7 @@ function insertBlock(view, start, end) {
   view.focus()
 }
 
-export default function Toolbar({ editorViewRef }) {
+export default function Toolbar({ editorViewRef, uploadConfig }) {
   const { t } = useLang()
   const [showMath, setShowMath] = useState(false)
   const [showTable, setShowTable] = useState(false)
@@ -138,6 +138,7 @@ export default function Toolbar({ editorViewRef }) {
       {showVisual && (
         <VisualEditor
           editorViewRef={editorViewRef}
+          uploadConfig={uploadConfig}
           onClose={() => setShowVisual(false)}
         />
       )}

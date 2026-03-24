@@ -31,6 +31,12 @@ export default function ImageModeHint({ onClose }) {
             <p style={{ margin: '4px 0', lineHeight: 1.7 }}>{t('hint.localDesc')}</p>
             <p style={{ margin: '4px 0', color: '#e53e3e', fontWeight: 600 }}>{t('hint.localWarn')}</p>
           </div>
+
+          <div style={{ border: '1px solid var(--border-color)', borderRadius: 8, padding: '12px 16px', marginTop: 12, background: 'var(--bg-secondary)' }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('hint.r2Title')}</div>
+            <p style={{ margin: '4px 0', lineHeight: 1.7 }}>{t('hint.r2Desc')}</p>
+            <p style={{ margin: '4px 0', color: '#e53e3e', fontWeight: 600 }}>{t('hint.r2Warn')}</p>
+          </div>
         </div>
         <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
           <button className="btn-cancel" onClick={handleDismiss}>{t('hint.dismiss')}</button>

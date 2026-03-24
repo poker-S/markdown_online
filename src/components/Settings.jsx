@@ -39,6 +39,7 @@ export default function Settings({ config, onSave, onClose, lang, setLang }) {
             <select value={service} onChange={e => setService(e.target.value)}>
               <option value="base64">{t('settings.base64Option')}</option>
               <option value="local">{t('settings.localOption')}</option>
+              <option value="r2">{t('settings.r2Option')}</option>
             </select>
           </div>
 
@@ -53,6 +54,13 @@ export default function Settings({ config, onSave, onClose, lang, setLang }) {
             <div style={{ borderRadius: 8, padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <p style={{ margin: '4px 0', lineHeight: 1.7 }}>{t('settings.localDesc')}</p>
               <p style={{ margin: '6px 0 0', color: '#e53e3e', fontWeight: 600 }}>{t('settings.localWarn')}</p>
+            </div>
+          )}
+
+          {service === 'r2' && (
+            <div style={{ borderRadius: 8, padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <p style={{ margin: '4px 0', lineHeight: 1.7 }}>{t('settings.r2Desc')}</p>
+              <p style={{ margin: '6px 0 0', color: '#e53e3e', fontWeight: 600 }}>{t('settings.r2Warn')}</p>
             </div>
           )}
         </div>

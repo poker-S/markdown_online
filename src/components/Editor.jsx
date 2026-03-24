@@ -45,9 +45,9 @@ export default function Editor({ content, onChange, theme, editorViewRef, upload
         const file = imageItem.getAsFile()
         if (!file) return false
 
-        // Insert placeholder
+        // Insert a temporary marker so the upload can finish asynchronously.
         const placeholderId = `uploading-${Date.now()}`
-        const placeholder = `![上传中...](${placeholderId})`
+        const placeholder = `![uploading image...](${placeholderId})`
         const { from, to } = view.state.selection.main
         view.dispatch({
           changes: { from, to, insert: placeholder },

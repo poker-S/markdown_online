@@ -432,3 +432,29 @@ function hello(name) {
 `,
   }, // end en
 }
+
+Object.assign(translations.zh.settings, {
+  r2Option: '方案三：Cloudflare R2 图床',
+  r2Desc: '图片会上传到 Cloudflare Worker + R2，并插入可公开访问的短链接，适合在线发布和跨设备协作。',
+  r2Warn: '注意：远程图片依赖网络可用性。当前 Worker 默认会每天清理 30 天前的托管图片，请不要把它当成永久图床。',
+})
+
+Object.assign(translations.en.settings, {
+  r2Option: 'Option 3: Cloudflare R2 image hosting',
+  r2Desc: 'Images are uploaded through a Cloudflare Worker into R2, then inserted as public short links. Best for publishing and collaboration.',
+  r2Warn: 'Note: hosted images require network access. The default Worker cleans up managed images older than 30 days, so this is not permanent storage.',
+})
+
+Object.assign(translations.zh.hint, {
+  intro: '粘贴图片时，编辑器现在支持三种存储方式，可在右上角设置中随时切换。',
+  r2Title: '方案三：Cloudflare R2 图床',
+  r2Desc: '图片会上传到 Cloudflare Worker，然后存入 R2，并自动插入 https://i.markdowneditor.cloud/... 这样的图片链接。',
+  r2Warn: '注意：当前 Worker 默认按 30 天保留策略清理托管图片，更适合公开分享和临时图床，不适合作为永久素材库。',
+})
+
+Object.assign(translations.en.hint, {
+  intro: 'When pasting images, the editor now supports three storage methods. You can switch between them at any time in Settings.',
+  r2Title: 'Option 3: Cloudflare R2 image hosting',
+  r2Desc: 'Images are sent to a Cloudflare Worker, stored in R2, and inserted as links such as https://i.markdowneditor.cloud/....',
+  r2Warn: 'Note: the default Worker keeps managed images for 30 days before cleanup. This works well for public sharing, but not as permanent asset storage.',
+})

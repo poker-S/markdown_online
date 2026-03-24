@@ -1,9 +1,49 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+﻿import { useState, useRef, useCallback, useEffect } from 'react'
 import { useLang } from '../utils/LangContext.jsx'
+import { fileToBase64, uploadImage } from '../utils/imageUpload.js'
 
 const VISUAL_DRAFT_KEY = 'md-editor-visual-draft'
 
-// ── HTML → Markdown ──────────────────────────────────────────────
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function insertUploadPlaceholder(editRef, altText) {
+  const placeholderId = `uploading-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const safeAlt = escapeHtml(altText || 'image')
+  editRef.current?.focus()
+  document.execCommand(
+    'insertHTML',
+    false,
+    `<span data-uploading-id="${placeholderId}" style="display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:var(--bg-secondary,#f5f5f7);border:1px solid var(--border-color,#d0d7de);font-size:12px;color:var(--text-secondary,#57606a)">Uploading ${safeAlt}...</span>`
+  )
+  return placeholderId
+}
+
+function replaceUploadPlaceholder(editRef, placeholderId, html) {
+  const placeholder = editRef.current?.querySelector(`[data-uploading-id="${placeholderId}"]`)
+  if (!placeholder) return
+  placeholder.outerHTML = html
+}
+
+function removeUploadPlaceholder(editRef, placeholderId) {
+  const placeholder = editRef.current?.querySelector(`[data-uploading-id="${placeholderId}"]`)
+  placeholder?.remove()
+}
+
+async function uploadVisualImage(file, uploadConfig) {
+  try {
+    return await uploadImage(file, uploadConfig)
+  } catch {
+    return await fileToBase64(file)
+  }
+}
+
+// HTML -> Markdown
 function nodeToMd(node) {
   if (node.nodeType === 3) return node.textContent
   if (node.nodeType !== 1) return ''
@@ -56,8 +96,8 @@ function htmlToMarkdown(html) {
   return Array.from(div.childNodes).map(nodeToMd).join('').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-// ── Main component ────────────────────────────────────────────────
-export default function VisualEditor({ editorViewRef, onClose }) {
+// Main component
+export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
   const { t } = useLang()
   const [phase, setPhase] = useState('intro')
   const editRef = useRef(null)
@@ -98,12 +138,16 @@ export default function VisualEditor({ editorViewRef, onClose }) {
       input.onchange = (e) => {
         const file = e.target.files[0]
         if (!file) return
-        const reader = new FileReader()
-        reader.onload = (ev) => {
-          editRef.current?.focus()
-          document.execCommand('insertHTML', false, `<img src="${ev.target.result}" alt="${file.name}" style="max-width:100%">`)
-        }
-        reader.readAsDataURL(file)
+        const placeholderId = insertUploadPlaceholder(editRef, file.name)
+        uploadVisualImage(file, uploadConfig)
+          .then((src) => {
+            replaceUploadPlaceholder(
+              editRef,
+              placeholderId,
+              `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name)}" style="max-width:100%">`
+            )
+          })
+          .catch(() => removeUploadPlaceholder(editRef, placeholderId))
       }
       input.click()
       return
@@ -148,7 +192,7 @@ export default function VisualEditor({ editorViewRef, onClose }) {
       document.execCommand(item.cmd, false, null)
     }
     editRef.current?.focus()
-  }, [t])
+  }, [t, uploadConfig])
 
   const handleInsert = useCallback(() => {
     const html = editRef.current?.innerHTML || ''
@@ -177,7 +221,7 @@ export default function VisualEditor({ editorViewRef, onClose }) {
   )
 }
 
-// ── Intro screen ──────────────────────────────────────────────────
+// Intro screen
 function IntroScreen({ onConfirm, onClose }) {
   const { t } = useLang()
   return (
@@ -195,7 +239,7 @@ function IntroScreen({ onConfirm, onClose }) {
   )
 }
 
-// ── Editor screen ─────────────────────────────────────────────────
+// Editor screen
 function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
   const { t } = useLang()
   const [showTablePicker, setShowTablePicker] = useState(false)
@@ -287,12 +331,17 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
     e.preventDefault()
     const file = imageItem.getAsFile()
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      document.execCommand('insertHTML', false, `<img src="${ev.target.result}" alt="image" style="max-width:100%">`)
-    }
-    reader.readAsDataURL(file)
-  }, [])
+    const placeholderId = insertUploadPlaceholder(editRef, file.name || 'image')
+    uploadVisualImage(file, uploadConfig)
+      .then((src) => {
+        replaceUploadPlaceholder(
+          editRef,
+          placeholderId,
+          `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name || 'image')}" style="max-width:100%">`
+        )
+      })
+      .catch(() => removeUploadPlaceholder(editRef, placeholderId))
+  }, [editRef, uploadConfig])
 
   return (
     <>
@@ -375,7 +424,7 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
   )
 }
 
-// ── Code block picker ─────────────────────────────────────────────
+// Code block picker
 function CodeBlockPicker({ onInsert, onClose }) {
   const { t } = useLang()
   const [lang, setLang] = useState('javascript')
@@ -412,7 +461,7 @@ function CodeBlockPicker({ onInsert, onClose }) {
   )
 }
 
-// ── Mini table grid picker ────────────────────────────────────────
+// Mini table grid picker
 function TablePicker({ onInsert, onClose }) {
   const { t } = useLang()
   const [hRow, setHRow] = useState(0)
@@ -442,3 +491,5 @@ function TablePicker({ onInsert, onClose }) {
     </div>
   )
 }
+
+
