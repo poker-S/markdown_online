@@ -89,7 +89,9 @@ export default function App() {
     const scroller = editorView.scrollDOM
     scroller.scrollTop = (preview.scrollTop / max) * Math.max(0, scroller.scrollHeight - scroller.clientHeight)
     requestAnimationFrame(() => { isSyncingRef.current = null })
-  }, [])  useEffect(() => {
+  }, [])
+
+  useEffect(() => {
     localStorage.setItem(LANG_KEY, lang)
     const prevLang = prevLangRef.current
     if (prevLang !== lang) {
