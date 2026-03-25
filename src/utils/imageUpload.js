@@ -1,4 +1,7 @@
-const DEFAULT_IMAGE_SERVICE = import.meta.env.VITE_DEFAULT_IMAGE_SERVICE === 'r2' ? 'r2' : 'base64'
+const _ALLOWED = ['base64', 'local', 'r2']
+const DEFAULT_IMAGE_SERVICE = _ALLOWED.includes(import.meta.env.VITE_DEFAULT_IMAGE_SERVICE)
+  ? import.meta.env.VITE_DEFAULT_IMAGE_SERVICE
+  : 'r2'
 const DEFAULT_UPLOAD_ENDPOINT = import.meta.env.VITE_IMAGE_UPLOAD_ENDPOINT || '/api/images/upload'
 
 export function fileToBase64(file) {

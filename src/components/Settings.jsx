@@ -37,9 +37,9 @@ export default function Settings({ config, onSave, onClose, lang, setLang }) {
           <div className="form-group">
             <label>{t('settings.storageLabel')}</label>
             <select value={service} onChange={e => setService(e.target.value)}>
+              <option value="r2">{t('settings.r2Option')}</option>
               <option value="base64">{t('settings.base64Option')}</option>
               <option value="local">{t('settings.localOption')}</option>
-              <option value="r2">{t('settings.r2Option')}</option>
             </select>
           </div>
 

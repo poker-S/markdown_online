@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.3.0] - 2026-03-25
+
+### 新功能 / New Features
+
+- **PokerS 链接 / PokerS Link（默认图片存储方式）**
+  图片上传后生成短链接，可在线访问，无需管理本地文件。现在作为默认存储方式。
+  Images are now uploaded as short links by default. Accessible online, no local file management needed.
+
+- **开屏公告动画 / Announcement Modal Animation**
+  首次打开时的图片存储说明弹窗新增 Mac 风格滑入动画，以及标题上方朴素动态装饰线。
+  The image storage hint modal now features a Mac-style slide-in animation and subtle animated decorative lines.
+
+### 优化 / Improvements
+
+- **设置界面文案精简 / Settings Copy Simplified**
+  三种存储方式的描述全部精简，去除冗余说明，更易阅读。
+  Descriptions for all three storage options have been shortened for clarity.
+
+- **README 重写 / README Rewrite**
+  以使用方法为主，本地部署为辅，结构更清晰。
+  README restructured to prioritize usage instructions, with local deployment as a secondary section.
+
+---
+
 ## [v1.2.1] - 2026-03-13
 
 ### Bug 修复 / Bug Fixes
