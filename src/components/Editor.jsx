@@ -22,15 +22,17 @@ const lightTheme = EditorView.theme({
   '.cm-focused .cm-selectionBackground': { background: 'rgba(0,113,227,0.2) !important' },
 })
 
-export default function Editor({ content, onChange, theme, editorViewRef, uploadConfig }) {
+export default function Editor({ content, onChange, theme, editorViewRef, uploadConfig, onScroll }) {
   const containerRef = useRef(null)
   const viewRef = useRef(null)
   const isExternalUpdate = useRef(false)
   const uploadConfigRef = useRef(uploadConfig)
   const onChangeRef = useRef(onChange)
+  const onScrollRef = useRef(onScroll)
 
   useEffect(() => { uploadConfigRef.current = uploadConfig }, [uploadConfig])
   useEffect(() => { onChangeRef.current = onChange }, [onChange])
+  useEffect(() => { onScrollRef.current = onScroll }, [onScroll])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -107,7 +109,11 @@ export default function Editor({ content, onChange, theme, editorViewRef, upload
     viewRef.current = view
     editorViewRef.current = view
 
+    const handleScroll = () => onScrollRef.current?.(view.scrollDOM)
+    view.scrollDOM.addEventListener('scroll', handleScroll, { passive: true })
+
     return () => {
+      view.scrollDOM.removeEventListener('scroll', handleScroll)
       view.destroy()
       viewRef.current = null
       editorViewRef.current = null

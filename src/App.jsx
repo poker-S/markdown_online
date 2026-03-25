@@ -58,9 +58,38 @@ export default function App() {
   const containerRef = useRef(null)
   const copyMenuRef = useRef(null)
   const isDragging = useRef(false)
+  const previewScrollRef = useRef(null)
+  const isSyncingRef = useRef(null)
+  const viewModeRef = useRef(viewMode)
+  useEffect(() => { viewModeRef.current = viewMode }, [viewMode])
 
   const prevLangRef = useRef(lang)
-  useEffect(() => {
+
+  const handleEditorScroll = useCallback((scrollDOM) => {
+    if (viewModeRef.current !== 'split') return
+    if (isSyncingRef.current === 'preview') return
+    const preview = previewScrollRef.current
+    if (!preview) return
+    const max = scrollDOM.scrollHeight - scrollDOM.clientHeight
+    if (max <= 0) return
+    isSyncingRef.current = 'editor'
+    preview.scrollTop = (scrollDOM.scrollTop / max) * Math.max(0, preview.scrollHeight - preview.clientHeight)
+    requestAnimationFrame(() => { isSyncingRef.current = null })
+  }, [])
+
+  const handlePreviewScroll = useCallback(() => {
+    if (viewModeRef.current !== 'split') return
+    if (isSyncingRef.current === 'editor') return
+    const preview = previewScrollRef.current
+    const editorView = editorViewRef.current
+    if (!preview || !editorView) return
+    const max = preview.scrollHeight - preview.clientHeight
+    if (max <= 0) return
+    isSyncingRef.current = 'preview'
+    const scroller = editorView.scrollDOM
+    scroller.scrollTop = (preview.scrollTop / max) * Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+    requestAnimationFrame(() => { isSyncingRef.current = null })
+  }, [])  useEffect(() => {
     localStorage.setItem(LANG_KEY, lang)
     const prevLang = prevLangRef.current
     if (prevLang !== lang) {
@@ -330,6 +359,7 @@ export default function App() {
                 theme={theme}
                 editorViewRef={editorViewRef}
                 uploadConfig={uploadConfig}
+                onScroll={handleEditorScroll}
               />
             </div>
           )}
@@ -340,7 +370,7 @@ export default function App() {
 
           {viewMode !== 'editor' && (
             <div className="preview-pane" style={{ width: viewMode === 'split' ? `${100 - splitRatio}%` : '100%' }}>
-              <Preview content={content} theme={theme} />
+              <Preview content={content} theme={theme} scrollRef={previewScrollRef} onScroll={handlePreviewScroll} />
             </div>
           )}
         </div>

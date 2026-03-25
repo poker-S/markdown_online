@@ -36,7 +36,7 @@ function renderMath(html) {
   return html
 }
 
-export default function Preview({ content }) {
+export default function Preview({ content, scrollRef, onScroll }) {
   const html = useMemo(() => {
     let rendered = marked.parse(content || '')
     rendered = renderMath(rendered)
@@ -44,7 +44,7 @@ export default function Preview({ content }) {
   }, [content])
 
   return (
-    <div className="preview-pane" style={{ flex: 1, overflowY: 'auto' }}>
+    <div ref={scrollRef} onScroll={onScroll} className="preview-pane" style={{ flex: 1, overflowY: 'auto' }}>
       <div
         className="preview-content"
         dangerouslySetInnerHTML={{ __html: html }}
