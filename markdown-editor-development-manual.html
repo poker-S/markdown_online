@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown Editor Development Manual</title>
+  <style>
+    :root {
+      --bg: #f3f0ea;
+      --paper: #fffdf9;
+      --ink: #1f2421;
+      --muted: #5e6763;
+      --line: #d8d1c6;
+      --accent: #0d6a63;
+      --accent-soft: #d7ece8;
+      --accent-strong: #0a4f4a;
+      --warn: #875b0e;
+      --warn-bg: #fff6df;
+      --code: #f6f1e8;
+      --shadow: 0 18px 48px rgba(40, 38, 29, 0.08);
+      --radius: 18px;
+      --mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      --ui: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--ui);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(13, 106, 99, 0.08), transparent 30%),
+        radial-gradient(circle at top right, rgba(135, 91, 14, 0.08), transparent 28%),
+        var(--bg);
+      line-height: 1.72;
+    }
+    a { color: var(--accent-strong); }
+    code, pre { font-family: var(--mono); }
+    .shell {
+      width: min(1400px, calc(100vw - 48px));
+      margin: 28px auto 48px;
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .sidebar {
+      position: sticky;
+      top: 20px;
+      background: rgba(255, 253, 249, 0.86);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(216, 209, 198, 0.9);
+      border-radius: 24px;
+      padding: 22px 20px;
+      box-shadow: var(--shadow);
+    }
+    .brand { margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .brand h1 { margin: 0 0 10px; font-size: 24px; line-height: 1.15; letter-spacing: -0.02em; }
+    .brand p { margin: 0; color: var(--muted); font-size: 14px; }
+    .meta { display: grid; gap: 10px; margin-bottom: 18px; }
+    .meta-item { padding: 10px 12px; border-radius: 14px; background: var(--accent-soft); font-size: 13px; }
+    .toc-title { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+    .toc { display: grid; gap: 8px; }
+    .toc a { display: block; padding: 8px 10px; border-radius: 12px; color: var(--ink); text-decoration: none; }
+    .toc a:hover { background: var(--accent-soft); color: var(--accent-strong); }
+    .content { display: grid; gap: 20px; }
+    .hero, .panel { background: var(--paper); border: 1px solid rgba(216, 209, 198, 0.95); border-radius: 28px; box-shadow: var(--shadow); }
+    .hero { padding: 32px; position: relative; overflow: hidden; }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(13, 106, 99, 0.08), transparent 40%),
+        linear-gradient(315deg, rgba(135, 91, 14, 0.08), transparent 32%);
+      pointer-events: none;
+    }
+    .hero h2 { margin: 0 0 14px; font-size: 38px; line-height: 1.06; letter-spacing: -0.04em; }
+    .hero p { margin: 0; max-width: 900px; font-size: 16px; color: var(--muted); }
+    .hero-grid, .stats, .two-col, .card-grid { display: grid; gap: 16px; }
+    .hero-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 24px; }
+    .hero-card, .stat, .mini-card, .warning, .note { border-radius: 18px; padding: 16px 18px; }
+    .hero-card { background: rgba(255, 255, 255, 0.78); border: 1px solid var(--line); }
+    .hero-card h3, .panel h3, .panel h4 { margin: 0 0 8px; }
+    .hero-card p, .stat p, .mini-card p, .warning p, .note p, .panel p { margin: 0; color: var(--muted); }
+    .panel { padding: 28px; }
+    .panel > h2 { margin: 0 0 12px; font-size: 28px; letter-spacing: -0.03em; }
+    .panel > .lead { margin-bottom: 20px; color: var(--muted); }
+    .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 20px; }
+    .stat { background: #f8f5ef; border: 1px solid var(--line); }
+    .stat strong { display: block; margin-bottom: 6px; font-size: 26px; color: var(--accent-strong); letter-spacing: -0.03em; }
+    .two-col, .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mini-card { background: #f8f5ef; border: 1px solid var(--line); }
+    .warning { background: var(--warn-bg); border: 1px solid #e9d9a9; }
+    .warning h3 { color: var(--warn); }
+    .note { background: var(--accent-soft); border: 1px solid #bddcd6; }
+    .tree, .flow {
+      padding: 16px 18px;
+      background: var(--code);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow-x: auto;
+      white-space: pre;
+      font-size: 13px;
+      line-height: 1.62;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 14px;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+    }
+    th:last-child, td:last-child { border-right: none; }
+    tr:last-child td { border-bottom: none; }
+    th { background: #f8f5ef; text-align: left; font-size: 13px; letter-spacing: 0.02em; }
+    .tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .module { padding: 20px 0; border-top: 1px dashed var(--line); }
+    .module:first-of-type { border-top: none; padding-top: 0; }
+    .module h3 { margin: 0 0 10px; font-size: 22px; letter-spacing: -0.02em; }
+    .module ul, .panel ul, .panel ol { margin: 10px 0 0; padding-left: 20px; }
+    .module li, .panel li { margin: 6px 0; }
+    .path {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #edf3f1;
+      border: 1px solid #cfe0dc;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent-strong);
+    }
+    .ref { color: var(--accent-strong); font-family: var(--mono); font-size: 12px; }
+    .footer { color: var(--muted); font-size: 13px; text-align: center; padding: 8px 0 0; }
+    @media (max-width: 1120px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .hero-grid, .stats, .two-col, .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Markdown Editor<br />开发手册</h1>
+        <p>基于 2026-03-20 对当前仓库的重新扫描结果生成。用于后续维护、扩展、重构和交接。</p>
+      </div>
+      <div class="meta">
+        <div class="meta-item">扫描范围：排除 <code>node_modules</code> 与 <code>.git</code> 的项目源码与配置</div>
+        <div class="meta-item">当前源码：<strong>19</strong> 个 <code>src</code> 文件</div>
+        <div class="meta-item">组件数：<strong>10</strong> 个；工具文件：<strong>6</strong> 个</div>
+      </div>
+      <div class="toc-title">目录</div>
+      <nav class="toc">
+        <a href="#overview">1. 项目总览</a>
+        <a href="#structure">2. 项目结构</a>
+        <a href="#architecture">3. 架构与数据流</a>
+        <a href="#storage">4. 本地存储与状态</a>
+        <a href="#ledger">5. 文件逐项说明</a>
+        <a href="#change-map">6. 常见改动入口</a>
+        <a href="#images">7. 图片相关改动指南</a>
+        <a href="#buttons">8. 按钮相关改动指南</a>
+        <a href="#risks">9. 风险与重构建议</a>
+        <a href="#rules">10. 维护规则</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <section class="hero" id="overview">
+        <span class="tagline">Project Baseline</span>
+        <h2>当前项目不是单纯的 Markdown 编辑器，而是一个“多输出、多入口、多语言”的纯前端文档工作台。</h2>
+        <p>
+          它现在已经同时包含：CodeMirror Markdown 编辑、实时预览、可视化插入编辑器、数学公式、图片粘贴、微信富文本复制、
+          52pojie BBCode 转换、中英文界面、自动保存、导出 HTML、分栏拖拽和专注模式。后续如果继续扩功能，必须把“改哪个文件、会牵动谁”
+          管清楚，否则很容易只改了一层，结果预览、复制、导出、可视化插入和国际化不同步。
+        </p>
+        <div class="hero-grid">
+          <div class="hero-card">
+            <h3>技术栈</h3>
+            <p>Vite 5 + React 18 + CodeMirror 6 + marked + highlight.js + KaTeX + DOMPurify + html2canvas</p>
+          </div>
+          <div class="hero-card">
+            <h3>运行模式</h3>
+            <p>纯浏览器前端，无后端。文件打开、保存、导出、复制、图片处理全部在浏览器侧完成。</p>
+          </div>
+          <div class="hero-card">
+            <h3>当前最重要的事实</h3>
+            <p>国际化、复制格式、可视化编辑和 Markdown 预览都已经形成多条处理链，新增功能不能只改一个地方。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>扫描摘要</h2>
+        <p class="lead">这份手册的判断基于当前仓库实际代码，而不是 README 描述。下面这些数字适合用作项目基线。</p>
+        <div class="stats">
+          <div class="stat">
+            <strong>28</strong>
+            <p>排除 <code>dist</code> 的源码/配置文件总数</p>
+          </div>
+          <div class="stat">
+            <strong>19</strong>
+            <p><code>src</code> 下源码文件数</p>
+          </div>
+          <div class="stat">
+            <strong>1122</strong>
+            <p><code>src/App.css</code> 当前行数，样式已是独立复杂模块</p>
+          </div>
+          <div class="stat">
+            <strong>444</strong>
+            <p><code>src/components/VisualEditor.jsx</code> 当前行数，是核心复杂热点</p>
+          </div>
+        </div>
+        <div class="two-col" style="margin-top:20px;">
+          <div class="note">
+            <h3>当前主流程</h3>
+            <p><code>App</code> 持有主文档状态，<code>Editor</code> 负责输入，<code>Preview</code> 负责渲染，复制和导出都取自预览 DOM。</p>
+          </div>
+          <div class="warning">
+            <h3>当前维护风险</h3>
+            <p>很多功能以 DOM 结构为中间层衔接，例如可视化编辑、复制富文本、BBCode 转换。如果你改变预览 HTML 结构，复制和论坛输出很可能也要跟着改。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="structure">
+        <h2>项目结构</h2>
+        <p class="lead">下面是当前项目对维护最有意义的结构视图。重点不是文件名本身，而是哪些文件是源码入口，哪些是构建产物，哪些是只看不改的辅助文件。</p>
+        <div class="tree">d:\markdown-editor
+├─ .claude
+│  └─ settings.local.json                # 本地工具权限配置，不参与运行时业务
+├─ .github
+│  └─ workflows
+│     └─ deploy.yml                      # GitHub Pages 自动部署流程
+├─ dist                                  # 构建产物，不应手工修改
+│  ├─ assets
+│  │  ├─ index-BE1D40Zk.css
+│  │  └─ index-Dm-Q7kBC.js
+│  └─ index.html
+├─ src                                   # 真实业务源码目录
+│  ├─ components
+│  │  ├─ Editor.jsx
+│  │  ├─ GuidePanel.jsx
+│  │  ├─ ImageModeHint.jsx
+│  │  ├─ MathPanel.jsx
+│  │  ├─ Preview.jsx
+│  │  ├─ Settings.jsx
+│  │  ├─ StatusBar.jsx
+│  │  ├─ TableBuilder.jsx
+│  │  ├─ Toolbar.jsx
+│  │  └─ VisualEditor.jsx
+│  ├─ utils
+│  │  ├─ LangContext.jsx
+│  │  ├─ base64Collapse.js
+│  │  ├─ bbcode.js
+│  │  ├─ i18n.js
+│  │  ├─ imageUpload.js
+│  │  └─ inlineStyles.js
+│  ├─ App.css
+│  ├─ App.jsx
+│  └─ main.jsx
+├─ CHANGELOG.md
+├─ README.md
+├─ index.html
+├─ markdown-editor-development-manual.html
+├─ package-lock.json
+├─ package.json
+└─ vite.config.js</div>
+        <table>
+          <thead>
+            <tr>
+              <th>目录/文件</th>
+              <th>定位</th>
+              <th>要不要手改</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>src/</code></td>
+              <td>全部业务源码</td>
+              <td>要</td>
+              <td>你后续绝大多数功能修改都会落在这里</td>
+            </tr>
+            <tr>
+              <td><code>dist/</code></td>
+              <td>构建输出</td>
+              <td>不要</td>
+              <td>每次 <code>npm run build</code> 会重建，手改会被覆盖</td>
+            </tr>
+            <tr>
+              <td><code>package.json</code></td>
+              <td>依赖与脚本</td>
+              <td>按需</td>
+              <td>加库、改脚本、升级包时才改</td>
+            </tr>
+            <tr>
+              <td><code>vite.config.js</code></td>
+              <td>构建行为</td>
+              <td>按需</td>
+              <td>路径基准、插件、构建策略变更时修改</td>
+            </tr>
+            <tr>
+              <td><code>.github/workflows/deploy.yml</code></td>
+              <td>自动部署</td>
+              <td>按需</td>
+              <td>改部署渠道、Node 版本或打包流程时才需要动</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel" id="architecture">
+        <h2>架构与数据流</h2>
+        <p class="lead">这个项目的业务逻辑可以拆成 5 层：入口层、编排层、编辑层、渲染/导出层、国际化/辅助层。</p>
+        <div class="card-grid">
+          <div class="mini-card">
+            <h3>1. 入口层</h3>
+            <p><span class="path">index.html</span> 加载外部 CSS，<span class="path">src/main.jsx</span> 挂载 React 应用。</p>
+          </div>
+          <div class="mini-card">
+            <h3>2. 编排层</h3>
+            <p><span class="path">src/App.jsx</span> 统一持有主文档状态、主题、文件名、语言、复制菜单和弹窗状态。</p>
+          </div>
+          <div class="mini-card">
+            <h3>3. 编辑层</h3>
+            <p><span class="path">Toolbar.jsx</span>、<span class="path">Editor.jsx</span>、<span class="path">VisualEditor.jsx</span> 共同构成输入入口。</p>
+          </div>
+          <div class="mini-card">
+            <h3>4. 渲染层</h3>
+            <p><span class="path">Preview.jsx</span> 负责 Markdown 转 HTML，<span class="path">inlineStyles.js</span> 与 <span class="path">bbcode.js</span> 负责衍生输出。</p>
+          </div>
+        </div>
+        <div class="flow" style="margin-top:18px;">浏览器加载
+  ↓
+index.html
+  ↓
+src/main.jsx
+  ↓
+src/App.jsx
+  ├─ 提供 LangContext
+  ├─ 维护 content / theme / fileName / lang / uploadConfig / 各类弹窗状态
+  ├─ 渲染 Toolbar
+  ├─ 渲染 Editor
+  ├─ 渲染 Preview
+  └─ 渲染 StatusBar / Settings / Guide / Hint
+
+文档编辑链
+  Editor(CodeMirror) ── onChange ──> App.content ── props ──> Preview(marked + KaTeX + sanitize)
+
+可视化插入链
+  VisualEditor(contentEditable)
+    └─ htmlToMarkdown()
+         └─ 插入到 CodeMirror 当前光标位置
+
+复制链 1：微信公众号
+  Preview DOM
+    └─ inlineStylesForWechat()
+         ├─ 公式转图片
+         ├─ 代码块转图片
+         └─ 给标签打内联样式
+
+复制链 2：52pojie
+  Preview DOM.innerHTML
+    └─ htmlToBBCode()
+
+图片链
+  CodeMirror 粘贴图片
+    └─ imageUpload.uploadImage()
+         ├─ base64：转 data URL
+         └─ local：生成 ./images/xxx.png 路径字符串
+
+注意：
+  local 模式当前不会真的把图片文件写入磁盘，只是生成 Markdown 相对路径。</div>
+        <div class="two-col" style="margin-top:18px;">
+          <div class="note">
+            <h3>为什么 App 是核心</h3>
+            <p><code>src/App.jsx</code> 同时掌管内容状态、语言状态、保存/打开/导出/复制行为、主布局和弹窗，这意味着顶栏功能和跨模块联动都从这里进。</p>
+          </div>
+          <div class="warning">
+            <h3>为什么 Preview 是隐性中枢</h3>
+            <p>复制富文本和 BBCode 都不是直接从 Markdown 文本生成，而是从预览出来的 HTML 再转。因此一旦你修改预览结构或样式语义，复制功能也要一起验。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="storage">
+        <h2>本地存储与状态</h2>
+        <p class="lead">当前项目没有后端数据库，所有持久化都依赖浏览器 <code>localStorage</code>。如果你要扩展状态，一定要先决定它是不是应该被保存，以及 Reset 是否需要清掉它。</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>定义位置</th>
+              <th>用途</th>
+              <th>当前 Reset 是否清理</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>md-editor-autosave</code></td>
+              <td><span class="ref">src/App.jsx:16</span></td>
+              <td>保存 <code>content</code>、<code>fileName</code>、<code>theme</code></td>
+              <td>会清理，逻辑在 <span class="ref">src/App.jsx:119</span></td>
+            </tr>
+            <tr>
+              <td><code>md-editor-upload-config</code></td>
+              <td><span class="ref">src/App.jsx:15</span></td>
+              <td>保存图片存储策略</td>
+              <td>会清理</td>
+            </tr>
+            <tr>
+              <td><code>md-editor-lang</code></td>
+              <td><span class="ref">src/App.jsx:17</span></td>
+              <td>保存界面语言</td>
+              <td>当前不会清理，Reset 后语言保持不变</td>
+            </tr>
+            <tr>
+              <td><code>md-editor-img-hint-dismissed</code></td>
+              <td><span class="ref">src/components/ImageModeHint.jsx:3</span></td>
+              <td>记录首次图片提示是否永久关闭</td>
+              <td>会清理</td>
+            </tr>
+            <tr>
+              <td><code>md-editor-visual-draft</code></td>
+              <td><span class="ref">src/components/VisualEditor.jsx:4</span></td>
+              <td>保存可视化编辑器草稿</td>
+              <td>当前不会被 Reset 清理</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="warning" style="margin-top:18px;">
+          <h3>当前一个重要细节</h3>
+          <p><code>Reset</code> 并没有删除 <code>md-editor-lang</code> 和 <code>md-editor-visual-draft</code>。如果后续希望 Reset 真正恢复首次打开状态，就要在 <span class="ref">src/App.jsx:119</span> 的 <code>handleReset</code> 中一起删除它们。</p>
+        </div>
+      </section>
+
+      <section class="panel" id="ledger">
+        <h2>文件逐项说明</h2>
+        <p class="lead">每个模块都会说明：它负责什么、什么时候应该改它、改它时一般还要联动谁。</p>
+
+        <div class="module">
+          <h3><span class="path">src/App.jsx</span> 应用总编排中心</h3>
+          <p>这是当前项目最关键的文件。几乎所有顶栏功能、跨组件状态、导出复制逻辑、设置持久化和语言切换都从这里进。</p>
+          <ul>
+            <li>核心状态：语言 <span class="ref">src/App.jsx:20</span>、内容 <span class="ref">:30</span>、主题 <span class="ref">:37</span>、视图模式 <span class="ref">:38</span>、文件名 <span class="ref">:39</span>、设置弹窗 <span class="ref">:44</span>、Guide 面板 <span class="ref">:45</span>、复制菜单 <span class="ref">:52</span>。</li>
+            <li>核心行为：保存上传配置 <span class="ref">:114</span>、Reset <span class="ref">:119</span>、保存 Markdown <span class="ref">:132</span>、打开文件 <span class="ref">:142</span>、复制微信富文本 <span class="ref">:157</span>、复制 52pojie BBCode <span class="ref">:185</span>、导出 HTML <span class="ref">:205</span>。</li>
+            <li>布局装配：Provider 在 <span class="ref">:252</span>；Toolbar、Editor、Preview、StatusBar、Settings、Hint、Guide 入口分别在 <span class="ref">:315</span>、<span class="ref">:322</span>、<span class="ref">:338</span>、<span class="ref">:344</span>、<span class="ref">:348</span>、<span class="ref">:358</span>、<span class="ref">:361</span>。</li>
+            <li>如果要新增顶栏按钮、复制渠道、文件行为、Reset 范围、主布局区块，首先看这个文件。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/Toolbar.jsx</span> Markdown 工具栏</h3>
+          <ul>
+            <li>工具配置源是 <span class="ref">src/components/Toolbar.jsx:7</span> 的 <code>TOOLBAR_ITEMS</code>。</li>
+            <li>文本插入、包裹、行前缀、块插入逻辑分别在 <span class="ref">:50</span>、<span class="ref">:56</span>、<span class="ref">:65</span>、<span class="ref">:77</span>。</li>
+            <li>工具栏主体组件在 <span class="ref">:85</span>。</li>
+            <li>特殊面板按钮：表格 <span class="ref">:121</span>、公式 <span class="ref">:122</span>、可视化插入 <span class="ref">:123</span>。</li>
+            <li>如果要增加 Markdown 按钮，先改这里；如果按钮文案需要双语，再去改 <span class="path">src/utils/i18n.js</span>。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/Editor.jsx</span> CodeMirror 编辑器封装</h3>
+          <ul>
+            <li>组件入口在 <span class="ref">src/components/Editor.jsx:25</span>。</li>
+            <li>粘贴图片处理器在 <span class="ref">:38</span>，会插入占位符，然后调用 <span class="path">src/utils/imageUpload.js</span>。</li>
+            <li>图片处理分支：先走 <code>uploadImage()</code>（<span class="ref">:57</span>），失败再回退 <code>fileToBase64()</code>（<span class="ref">:68</span>）。</li>
+            <li>Base64 折叠插件通过 <span class="ref">:102</span> 挂载。</li>
+            <li>CodeMirror 实例创建在 <span class="ref">:105</span> 和 <span class="ref">:106</span>。</li>
+            <li>如果要改编辑器行为、快捷粘贴、插件、主题扩展、行显示方式，要改这里。</li>
+          </ul>
+          <div class="warning" style="margin-top:14px;">
+            <h3>当前图片 local 模式的真实含义</h3>
+            <p>当前浏览器模式下的 <code>local</code> 不是保存文件到本地目录，只是把 Markdown 图片地址写成 <code>./images/文件名</code>。它不会自动创建 <code>images</code> 文件夹，也不会自动复制图片文件。</p>
+          </div>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/VisualEditor.jsx</span> 可视化插入编辑器</h3>
+          <ul>
+            <li>草稿 key 定义在 <span class="ref">src/components/VisualEditor.jsx:4</span>。</li>
+            <li>HTML 转 Markdown 的核心在 <span class="ref">:7</span> 的 <code>nodeToMd()</code> 和 <span class="ref">:53</span> 的 <code>htmlToMarkdown()</code>。</li>
+            <li>组件入口在 <span class="ref">:60</span>，内部工具栏配置在 <span class="ref">:65</span>。</li>
+            <li>按钮执行逻辑在 <span class="ref">:85</span> 的 <code>execCmd()</code>，插入回主编辑器的动作在 <span class="ref">:153</span>。</li>
+            <li>真正的编辑画面是 <span class="ref">:199</span> 的 <code>EditorScreen()</code>。</li>
+            <li>草稿保存、清空、格式激活检测分别在 <span class="ref">:210</span>、<span class="ref">:214</span>、<span class="ref">:221</span>。</li>
+            <li>代码块插入、表格插入、粘贴图片处理分别在 <span class="ref">:258</span>、<span class="ref">:269</span>、<span class="ref">:283</span>。</li>
+            <li>如果要增加新的所见即所得格式，例如下划线、高亮、自定义卡片，这个文件必须改，而且通常还要同步修改 <code>nodeToMd()</code>。</li>
+          </ul>
+          <div class="warning" style="margin-top:14px;">
+            <h3>当前一个容易忽略的差异</h3>
+            <p>可视化编辑器内上传图片是直接转 Base64 插入 HTML，并没有读取 <code>uploadConfig</code>。所以它和主 Markdown 编辑器的图片策略并不完全一致。如果后续要统一图片行为，需要扩展这里。</p>
+          </div>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/Preview.jsx</span> 预览渲染中心</h3>
+          <ul>
+            <li><code>marked</code> 的代码高亮配置在 <span class="ref">src/components/Preview.jsx:9</span>。</li>
+            <li>KaTeX 数学渲染逻辑在 <span class="ref">:23</span> 的 <code>renderMath()</code>。</li>
+            <li>组件本体在 <span class="ref">:39</span>，最终用 <code>DOMPurify.sanitize()</code> 清洗，位置在 <span class="ref">:43</span>。</li>
+            <li>如果要新增 Markdown 扩展、表情规则、特殊 HTML 白名单、渲染后包装结构，要改这里。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/TableBuilder.jsx</span> 表格构建器</h3>
+          <ul>
+            <li>组件入口：<span class="ref">src/components/TableBuilder.jsx:4</span>。</li>
+            <li>行列状态在 <span class="ref">:6</span>、<span class="ref">:7</span>；二阶段确认状态在 <span class="ref">:10</span>。</li>
+            <li>网格确认和 Markdown 生成分别在 <span class="ref">:14</span>、<span class="ref">:20</span>。</li>
+            <li>网格大小上限定义在 <span class="ref">:27</span> 的 <code>GRID = 8</code>。</li>
+            <li>如果要支持对齐方式、更多列数、默认表头模板、批量导入 CSV，这个文件是主要修改点。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/MathPanel.jsx</span> 公式库</h3>
+          <ul>
+            <li>公式数据源在 <span class="ref">src/components/MathPanel.jsx:4</span> 的 <code>MATH_CATEGORIES_DATA</code>。</li>
+            <li>组件入口在 <span class="ref">:58</span>，插入模式状态在 <span class="ref">:60</span> 与 <span class="ref">:61</span>。</li>
+            <li>插入逻辑在 <span class="ref">:63</span>，模板标题国际化在 <span class="ref">:68</span> 与 <span class="ref">:77</span>。</li>
+            <li>如果要加公式模板、加新分类、改行内/块级包装格式，这里和 <span class="path">src/utils/i18n.js</span> 都要改。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/Settings.jsx</span> 设置弹窗</h3>
+          <ul>
+            <li>组件入口：<span class="ref">src/components/Settings.jsx:4</span>。</li>
+            <li>设置项状态：图片策略 <span class="ref">:6</span>，语言选择 <span class="ref">:7</span>。</li>
+            <li>保存逻辑在 <span class="ref">:9</span>，会触发上层 <code>setLang</code> 和 <code>onSave</code>。</li>
+            <li>如果要新增设置项，例如字体大小、自动换行、预览宽度、默认导出主题，这里必须扩展，并同步 <span class="path">src/App.jsx</span> 的保存和初始读取逻辑。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/GuidePanel.jsx</span> 指南与更新日志面板</h3>
+          <ul>
+            <li>组件入口：<span class="ref">src/components/GuidePanel.jsx:3</span>。</li>
+            <li>语法数据和功能数据通过 <code>t('guide.sections')</code> 与 <code>t('guide.features')</code> 读取，位置在 <span class="ref">:5</span> 和 <span class="ref">:6</span>。</li>
+            <li>更新日志区在 <span class="ref">:42</span> 到 <span class="ref">:50</span>；关于区块在 <span class="ref">:57</span> 到 <span class="ref">:62</span>。</li>
+            <li>如果只是改指南文案，优先去 <span class="path">src/utils/i18n.js</span>；如果要改版面结构，再改这里。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/ImageModeHint.jsx</span> 图片策略提示</h3>
+          <ul>
+            <li>关闭标记 key 定义在 <span class="ref">src/components/ImageModeHint.jsx:3</span>。</li>
+            <li>组件入口在 <span class="ref">:5</span>，是否显示由 <span class="ref">:44</span> 的 <code>shouldShowHint()</code> 决定。</li>
+            <li>如果要改首次提示内容、关闭机制、改为多步骤引导，就改这里。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/components/StatusBar.jsx</span> 状态栏</h3>
+          <ul>
+            <li>组件入口在 <span class="ref">src/components/StatusBar.jsx:3</span>。</li>
+            <li>字符统计规则在 <span class="ref">:5</span> 到 <span class="ref">:9</span>。目前中文按字符数、英文按单词数做累计。</li>
+            <li>如果要加光标位置、当前语言、当前视图模式、文件大小估算，改这里即可。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/utils/i18n.js</span> 文案总表</h3>
+          <ul>
+            <li>整个国际化系统的真实源头。文件入口在 <span class="ref">src/utils/i18n.js:1</span>。</li>
+            <li>中文文案块从文件开头开始；英文文案块从 <span class="ref">:219</span> 开始。</li>
+            <li>按钮文案、提示文案、默认欢迎内容、指南内容、变更日志都在这里。</li>
+            <li>如果要新增一个带文案的按钮、菜单项、设置项、提示框，几乎一定要改这里，而且要同时补 <code>zh</code> 和 <code>en</code> 两套。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/utils/LangContext.jsx</span> 语言上下文</h3>
+          <ul>
+            <li><code>LangContext</code> 定义在 <span class="ref">src/utils/LangContext.jsx:4</span>。</li>
+            <li><code>useLang()</code> 在 <span class="ref">:6</span>，负责把路径字符串解析到翻译对象。</li>
+            <li>如果未来要接入更复杂的 i18n 库、命名空间、参数替换、格式化，这里是替换入口。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/utils/bbcode.js</span> 52pojie BBCode 转换器</h3>
+          <ul>
+            <li>节点递归转换入口在 <span class="ref">src/utils/bbcode.js:5</span> 的 <code>processNode()</code>。</li>
+            <li>表格专用转换在 <span class="ref">:118</span> 的 <code>convertTable()</code>。</li>
+            <li>最终导出函数在 <span class="ref">:135</span> 的 <code>htmlToBBCode()</code>。</li>
+            <li>如果要支持更多论坛标签、对齐、颜色、引用样式、更多代码块规则，改这里。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/utils/imageUpload.js</span> 图片地址策略</h3>
+          <ul>
+            <li>转 Base64 在 <span class="ref">src/utils/imageUpload.js:1</span>。</li>
+            <li>生成本地相对路径在 <span class="ref">:10</span>。</li>
+            <li>统一出口 <code>uploadImage()</code> 在 <span class="ref">:15</span>。</li>
+            <li>如果以后接对象存储、图床 API、拖拽上传、文件系统写入，这里应该升级为真正的上传网关。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/utils/base64Collapse.js</span> Base64 折叠插件</h3>
+          <ul>
+            <li>核心正则在 <span class="ref">src/utils/base64Collapse.js:4</span>。</li>
+            <li>可视折叠、右键展开和收起按钮都在这个文件。</li>
+            <li>如果要修改长图地址的显示方式、提示文字、交互动作、展开规则，要改这里。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/utils/inlineStyles.js</span> 微信复制专用 HTML 处理</h3>
+          <ul>
+            <li>导出入口在 <span class="ref">src/utils/inlineStyles.js:61</span> 的 <code>inlineStylesForWechat()</code>。</li>
+            <li>它会克隆预览 DOM，然后把 KaTeX 和代码块转成图片，再为常见标签打内联样式。</li>
+            <li>如果你修改预览样式，希望复制到微信时也保持效果，这个文件通常需要一起改。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3><span class="path">src/App.css</span> 样式总文件</h3>
+          <ul>
+            <li>CSS 变量区从 <span class="ref">src/App.css:1</span> 开始。</li>
+            <li>顶栏在 <span class="ref">:65</span>，工具栏在 <span class="ref">:194</span>，编辑器区域在 <span class="ref">:267</span>，预览排版在 <span class="ref">:356</span>，状态栏在 <span class="ref">:461</span>。</li>
+            <li>通用弹窗在 <span class="ref">:506</span>，Guide 面板在 <span class="ref">:636</span>，可视化编辑器在 <span class="ref">:822</span>，Copy 下拉菜单在 <span class="ref">:1089</span>。</li>
+            <li>如果你改 UI 结构，通常也要改这里。当前它已经不是单纯的全局样式，而是多个子模块样式的汇总。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3>根目录配置文件</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>文件</th>
+                <th>作用</th>
+                <th>什么时候修改</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>package.json</code></td>
+                <td>脚本和依赖来源</td>
+                <td>新增第三方库、升级依赖、增加 npm scripts</td>
+              </tr>
+              <tr>
+                <td><code>index.html</code></td>
+                <td>挂载根节点，并从 CDN 加载 highlight.js 与 KaTeX 样式</td>
+                <td>如果要改页面标题、SEO、外部样式链接或注入额外 head 资源</td>
+              </tr>
+              <tr>
+                <td><code>vite.config.js</code></td>
+                <td>Vite 配置，当前 <code>base: '/'</code></td>
+                <td>部署域名路径变化、加插件、改打包行为时</td>
+              </tr>
+              <tr>
+                <td><code>.github/workflows/deploy.yml</code></td>
+                <td>GitHub Pages 自动构建部署</td>
+                <td>换部署平台、Node 版本、触发分支或构建命令</td>
+              </tr>
+              <tr>
+                <td><code>README.md</code></td>
+                <td>面对使用者的说明书</td>
+                <td>功能或使用方式发生变化时同步更新</td>
+              </tr>
+              <tr>
+                <td><code>CHANGELOG.md</code></td>
+                <td>版本变更记录</td>
+                <td>发版或补充变更历史时</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="change-map">
+        <h2>常见改动入口</h2>
+        <p class="lead">这一节直接回答“如果我要做某件事，应该先改哪几个文件”。</p>
+        <table>
+          <thead>
+            <tr>
+              <th>目标</th>
+              <th>先改哪里</th>
+              <th>通常还要联动哪里</th>
+              <th>原因</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>新增顶栏按钮</td>
+              <td><code>src/App.jsx</code></td>
+              <td><code>src/utils/i18n.js</code>、<code>src/App.css</code></td>
+              <td>顶栏按钮都在 App 中定义；文案走 i18n；样式变化大时改 CSS</td>
+            </tr>
+            <tr>
+              <td>新增 Markdown 工具栏按钮</td>
+              <td><code>src/components/Toolbar.jsx</code></td>
+              <td><code>src/utils/i18n.js</code>、必要时 <code>src/components/Preview.jsx</code></td>
+              <td>按钮配置和插入逻辑在 Toolbar；新语法要预览识别时 Preview 也要联动</td>
+            </tr>
+            <tr>
+              <td>新增可视化编辑器按钮</td>
+              <td><code>src/components/VisualEditor.jsx</code></td>
+              <td><code>src/utils/i18n.js</code>、<code>src/App.css</code></td>
+              <td>可视化工具栏是独立的一套，不与 Toolbar 共用配置</td>
+            </tr>
+            <tr>
+              <td>新增设置项</td>
+              <td><code>src/components/Settings.jsx</code></td>
+              <td><code>src/App.jsx</code>、<code>src/utils/i18n.js</code></td>
+              <td>Settings 只负责采集，真正持久化和初始化在 App</td>
+            </tr>
+            <tr>
+              <td>新增复制渠道</td>
+              <td><code>src/App.jsx</code></td>
+              <td>新增或修改 <code>src/utils/*.js</code>、<code>src/utils/i18n.js</code>、<code>src/App.css</code></td>
+              <td>Copy 下拉菜单与复制行为在 App，具体格式转换一般要新建 util</td>
+            </tr>
+            <tr>
+              <td>新增预览渲染规则</td>
+              <td><code>src/components/Preview.jsx</code></td>
+              <td><code>src/utils/inlineStyles.js</code>、<code>src/utils/bbcode.js</code></td>
+              <td>预览 HTML 是后续复制转换的来源</td>
+            </tr>
+            <tr>
+              <td>新增导出格式</td>
+              <td><code>src/App.jsx</code></td>
+              <td>新增 util 文件、<code>src/utils/i18n.js</code></td>
+              <td>导出按钮与下载逻辑在 App，实际转换通常拆到 util</td>
+            </tr>
+            <tr>
+              <td>修改默认欢迎内容</td>
+              <td><code>src/utils/i18n.js</code></td>
+              <td><code>src/App.jsx</code></td>
+              <td>默认内容与语言绑定；App 会根据语言切换决定是否替换内容</td>
+            </tr>
+            <tr>
+              <td>新增 Guide 文档项</td>
+              <td><code>src/utils/i18n.js</code></td>
+              <td><code>src/components/GuidePanel.jsx</code></td>
+              <td>大多数 Guide 文本已集中在 i18n；只有结构变更才动 GuidePanel</td>
+            </tr>
+            <tr>
+              <td>改主题或全局视觉</td>
+              <td><code>src/App.css</code></td>
+              <td>必要时 <code>src/App.jsx</code> 和 <code>index.html</code></td>
+              <td>主题变量与大多数 UI 样式都在 App.css；高亮主题链接在 App.jsx</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel" id="images">
+        <h2>图片相关改动指南</h2>
+        <p class="lead">“添加图片到项目中”在当前项目里至少有两种完全不同的场景。</p>
+
+        <div class="module">
+          <h3>场景 A：给编辑器增加或修改文档中的图片能力</h3>
+          <ul>
+            <li>主 Markdown 编辑器粘贴图片：改 <span class="path">src/components/Editor.jsx</span>，入口是 <span class="ref">src/components/Editor.jsx:38</span>。</li>
+            <li>图片地址策略：改 <span class="path">src/utils/imageUpload.js</span>。</li>
+            <li>图片策略设置 UI：改 <span class="path">src/components/Settings.jsx</span> 和 <span class="path">src/utils/i18n.js</span>。</li>
+            <li>首次提示内容：改 <span class="path">src/components/ImageModeHint.jsx</span>。</li>
+            <li>如果要让可视化编辑器图片策略与主编辑器保持一致，还要改 <span class="path">src/components/VisualEditor.jsx</span>。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3>场景 B：给应用 UI 本身加图片资源，例如 Logo、背景图、引导插图</h3>
+          <ul>
+            <li>当前项目里还没有 <code>src/assets</code> 或 <code>public</code> 目录，因为 UI 目前几乎没有本地图片资源。</li>
+            <li>如果图片需要参与打包、在组件里 import，建议新建 <code>src/assets/</code>。</li>
+            <li>如果图片想通过固定路径访问，建议新建 <code>public/</code>。</li>
+            <li>然后在对应组件中引入图片，例如顶栏改 <code>src/App.jsx</code>，Guide 面板改 <code>src/components/GuidePanel.jsx</code>，可视化欢迎页改 <code>src/components/VisualEditor.jsx</code>。</li>
+            <li>尺寸、圆角、阴影、布局放到 <code>src/App.css</code> 里处理。</li>
+          </ul>
+        </div>
+
+        <div class="module">
+          <h3>如果你要接真实图床上传</h3>
+          <ul>
+            <li>优先把上传逻辑抽到 <code>src/utils/imageUpload.js</code>，让它根据配置返回远程 URL。</li>
+            <li><code>src/components/Settings.jsx</code> 需要新增图床配置项，例如 API 地址、token、存储桶。</li>
+            <li><code>src/App.jsx</code> 需要保存这些配置，必要时新增本地存储 key。</li>
+            <li><code>src/components/VisualEditor.jsx</code> 也要统一走同一上传接口，否则主编辑器和可视化编辑器行为会分裂。</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel" id="buttons">
+        <h2>按钮相关改动指南</h2>
+        <p class="lead">增加按钮模块在这个项目里至少分成三类：顶栏按钮、Markdown 工具栏按钮、可视化编辑器按钮。三类入口完全不同。</p>
+        <table>
+          <thead>
+            <tr>
+              <th>按钮类型</th>
+              <th>改动主文件</th>
+              <th>必须同步的文件</th>
+              <th>说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>顶栏按钮</td>
+              <td><code>src/App.jsx</code></td>
+              <td><code>src/utils/i18n.js</code>、必要时 <code>src/App.css</code></td>
+              <td>例如 Reset、Guide、Open、Save、Export、Copy、Settings、Theme 都在这里</td>
+            </tr>
+            <tr>
+              <td>Markdown 工具栏按钮</td>
+              <td><code>src/components/Toolbar.jsx</code></td>
+              <td><code>src/utils/i18n.js</code>、必要时 <code>src/components/Preview.jsx</code></td>
+              <td>用于往 Markdown 文本中插入语法或打开功能面板</td>
+            </tr>
+            <tr>
+              <td>可视化编辑器按钮</td>
+              <td><code>src/components/VisualEditor.jsx</code></td>
+              <td><code>src/utils/i18n.js</code>、<code>src/App.css</code></td>
+              <td>这是独立的一套所见即所得工具栏，不与 Toolbar 共用配置</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="module">
+          <h3>新增顶栏按钮的标准步骤</h3>
+          <ol>
+            <li>在 <span class="ref">src/App.jsx:274</span> 附近的顶栏区域新增按钮 JSX。</li>
+            <li>在 App 中新增对应处理函数，放在 <code>handleSave</code>、<code>handleOpen</code> 那一组附近，保持编排集中。</li>
+            <li>在 <span class="path">src/utils/i18n.js</span> 的 <code>app</code> 命名空间补中文和英文文案。</li>
+            <li>如果按钮需要菜单、弹窗、联动状态，还要在 App 新增 state，并决定是否进 localStorage。</li>
+            <li>如果按钮样式和现有 <code>view-btn</code> 不一样，再补 <span class="path">src/App.css</span>。</li>
+          </ol>
+        </div>
+
+        <div class="module">
+          <h3>新增 Markdown 工具栏按钮的标准步骤</h3>
+          <ol>
+            <li>先判断它属于哪一类：包裹选区、行前缀、区块插入、纯文本片段、弹窗型工具。</li>
+            <li>在 <span class="ref">src/components/Toolbar.jsx:7</span> 的 <code>TOOLBAR_ITEMS</code> 里新增条目，或者仿照表格/公式/可视化按钮新增特殊按钮。</li>
+            <li>在 <span class="path">src/utils/i18n.js</span> 的 <code>toolbar</code> 下补上按钮名和 title。</li>
+            <li>如果这个按钮引入了新 Markdown 语法，确认 <span class="path">src/components/Preview.jsx</span> 能正确渲染。</li>
+            <li>如果这个语法还要支持复制到微信或 52pojie，再同步检查 <span class="path">src/utils/inlineStyles.js</span> 与 <span class="path">src/utils/bbcode.js</span>。</li>
+          </ol>
+        </div>
+
+        <div class="module">
+          <h3>新增可视化编辑器按钮的标准步骤</h3>
+          <ol>
+            <li>在 <span class="ref">src/components/VisualEditor.jsx:65</span> 的 <code>VIS_TOOLBAR</code> 增加定义。</li>
+            <li>在 <span class="ref">src/components/VisualEditor.jsx:85</span> 的 <code>execCmd()</code> 或后续辅助函数里补动作逻辑。</li>
+            <li>如果新格式会被插回 Markdown，必须同步修改 <span class="ref">src/components/VisualEditor.jsx:7</span> 的 <code>nodeToMd()</code>。</li>
+            <li>如果新格式需要激活态高亮，再改 <span class="ref">src/components/VisualEditor.jsx:221</span> 的 <code>updateFormats()</code>。</li>
+            <li>文案统一补到 <span class="path">src/utils/i18n.js</span> 的 <code>visual.tb</code> 下。</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="panel" id="risks">
+        <h2>风险与重构建议</h2>
+        <p class="lead">这部分不是要求你现在就重构，而是告诉你未来项目一大，就会先从哪里痛起来。</p>
+        <div class="card-grid">
+          <div class="warning">
+            <h3>热点 1：App.jsx 过重</h3>
+            <p><code>src/App.jsx</code> 已经同时管理主状态、文件操作、复制、导出、菜单、弹窗和上下文。后续建议拆出更细的 hooks 或 services。</p>
+          </div>
+          <div class="warning">
+            <h3>热点 2：VisualEditor.jsx 复杂度高</h3>
+            <p>它同时承担 intro、工具栏、contentEditable、草稿保存、格式检测、图片粘贴、表格插入、代码块插入和 Markdown 转换。</p>
+          </div>
+          <div class="warning">
+            <h3>热点 3：i18n.js 已成大文件</h3>
+            <p>翻译、默认内容、Guide 文档和更新日志都挤在同一个文件。后续建议按模块拆分语言包。</p>
+          </div>
+          <div class="warning">
+            <h3>热点 4：App.css 已经像样式仓库</h3>
+            <p>当前样式文件 1122 行，已经包含主应用、Guide、Copy 菜单、Visual Editor 等多个子系统。</p>
+          </div>
+        </div>
+        <div class="two-col" style="margin-top:18px;">
+          <div class="note">
+            <h3>当前一个工程优势</h3>
+            <p>项目仍然是纯前端，依赖边界清晰，没有后端耦合，重构成本还可控。现在开始建文档和规范是合适时机。</p>
+          </div>
+          <div class="warning">
+            <h3>当前一个技术债</h3>
+            <p>可视化编辑器大量依赖 <code>document.execCommand()</code>。这个 API 是旧式方案，虽然现在能用，但后续复杂块结构编辑很可能会受限。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="rules">
+        <h2>维护规则</h2>
+        <p class="lead">下面这些规则适合直接当成后续协作约束，能明显减少“改了 A 忘了 B”的情况。</p>
+        <ol>
+          <li>新增任何用户可见文案时，同时补 <code>zh</code> 和 <code>en</code>，以 <span class="path">src/utils/i18n.js</span> 为准。</li>
+          <li>新增任何导出、复制、预览可见的格式时，至少检查 4 个地方：<code>Toolbar/VisualEditor</code>、<code>Preview</code>、<code>inlineStyles</code>、<code>bbcode</code>。</li>
+          <li>新增任何设置项时，不能只改弹窗；还要补 App 中的默认值、持久化、恢复和 Reset 行为。</li>
+          <li>新增任何图片能力时，要先区分是文档内容图片还是应用 UI 资源图片，两者入口不同。</li>
+          <li>不要手改 <code>dist</code>，所有运行逻辑都应回到 <code>src</code> 和配置文件中修改。</li>
+          <li>Guide 面板是用户说明书，功能变化后应同步更新它，否则项目会很快出现代码和说明不一致。</li>
+          <li>如果改 Preview HTML 结构，必须回归测试：微信复制、52pojie 复制、HTML 导出、数学公式、代码块、表格。</li>
+        </ol>
+        <div class="note" style="margin-top:18px;">
+          <h3>建议后续建立的目录约定</h3>
+          <p>未来如果继续扩功能，建议逐步引入这些目录：<code>src/features/</code>、<code>src/hooks/</code>、<code>src/assets/</code>、<code>src/styles/</code>、<code>docs/</code>。</p>
+        </div>
+      </section>
+
+      <div class="footer">
+        手册文件基于当前仓库扫描结果生成。后续若项目结构变化，应同步更新本手册，尤其是常见改动入口和本地存储键两部分。
+      </div>
+
+    </main>
+  </div>
+</body>
+</html>

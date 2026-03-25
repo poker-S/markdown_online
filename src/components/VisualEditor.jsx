@@ -1,8 +1,15 @@
-﻿import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import DOMPurify from 'dompurify'
 import { useLang } from '../utils/LangContext.jsx'
 import { fileToBase64, uploadImage } from '../utils/imageUpload.js'
 
 const VISUAL_DRAFT_KEY = 'md-editor-visual-draft'
+const VISUAL_ALLOWED_TAGS = [
+  'a', 'b', 'blockquote', 'br', 'code', 'del', 'div', 'em', 'h1', 'h2', 'h3',
+  'img', 'li', 'ol', 'p', 'pre', 's', 'span', 'strike', 'strong', 'table',
+  'tbody', 'td', 'th', 'thead', 'tr', 'ul',
+]
+const VISUAL_ALLOWED_ATTR = ['alt', 'data-lang', 'data-uploading-id', 'href', 'src']
 
 function escapeHtml(text) {
   return text
@@ -12,6 +19,22 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;')
 }
 
+function sanitizeVisualHtml(html) {
+  return DOMPurify.sanitize(html || '', {
+    ALLOWED_TAGS: VISUAL_ALLOWED_TAGS,
+    ALLOWED_ATTR: VISUAL_ALLOWED_ATTR,
+  })
+}
+
+function applySanitizedEditorHtml(editRef, html) {
+  if (!editRef.current) return ''
+  const safeHtml = sanitizeVisualHtml(html)
+  if (editRef.current.innerHTML !== safeHtml) {
+    editRef.current.innerHTML = safeHtml
+  }
+  return safeHtml
+}
+
 function insertUploadPlaceholder(editRef, altText) {
   const placeholderId = `uploading-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const safeAlt = escapeHtml(altText || 'image')
@@ -19,7 +42,7 @@ function insertUploadPlaceholder(editRef, altText) {
   document.execCommand(
     'insertHTML',
     false,
-    `<span data-uploading-id="${placeholderId}" style="display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:var(--bg-secondary,#f5f5f7);border:1px solid var(--border-color,#d0d7de);font-size:12px;color:var(--text-secondary,#57606a)">Uploading ${safeAlt}...</span>`
+    `<span data-uploading-id="${placeholderId}">Uploading ${safeAlt}...</span>`
   )
   return placeholderId
 }
@@ -27,7 +50,7 @@ function insertUploadPlaceholder(editRef, altText) {
 function replaceUploadPlaceholder(editRef, placeholderId, html) {
   const placeholder = editRef.current?.querySelector(`[data-uploading-id="${placeholderId}"]`)
   if (!placeholder) return
-  placeholder.outerHTML = html
+  placeholder.outerHTML = sanitizeVisualHtml(html)
 }
 
 function removeUploadPlaceholder(editRef, placeholderId) {
@@ -43,60 +66,82 @@ async function uploadVisualImage(file, uploadConfig) {
   }
 }
 
-// HTML -> Markdown
 function nodeToMd(node) {
   if (node.nodeType === 3) return node.textContent
   if (node.nodeType !== 1) return ''
   const tag = node.tagName.toLowerCase()
   const inner = () => Array.from(node.childNodes).map(nodeToMd).join('')
   switch (tag) {
-    case 'br': return '\n'
+    case 'br':
+      return '\n'
     case 'pre': {
       const codeEl = node.querySelector('code')
       const lang = node.getAttribute('data-lang') || ''
       const text = (codeEl ? codeEl.textContent : node.textContent).trimEnd()
       return `\`\`\`${lang}\n${text}\n\`\`\`\n\n`
     }
-    case 'b': case 'strong': return `**${inner()}**`
-    case 'i': case 'em': return `*${inner()}*`
-    case 's': case 'del': case 'strike': return `~~${inner()}~~`
-    case 'code': return `\`${inner()}\``
-    case 'h1': return `# ${inner()}\n\n`
-    case 'h2': return `## ${inner()}\n\n`
-    case 'h3': return `### ${inner()}\n\n`
+    case 'b':
+    case 'strong':
+      return `**${inner()}**`
+    case 'i':
+    case 'em':
+      return `*${inner()}*`
+    case 's':
+    case 'del':
+    case 'strike':
+      return `~~${inner()}~~`
+    case 'code':
+      return `\`${inner()}\``
+    case 'h1':
+      return `# ${inner()}\n\n`
+    case 'h2':
+      return `## ${inner()}\n\n`
+    case 'h3':
+      return `### ${inner()}\n\n`
     case 'blockquote': {
-      const t = inner().trim()
-      return t.split('\n').map(l => `> ${l}`).join('\n') + '\n\n'
+      const text = inner().trim()
+      return text.split('\n').map(line => `> ${line}`).join('\n') + '\n\n'
     }
     case 'ul':
       return Array.from(node.children).map(li => `- ${nodeToMd(li).trim()}`).join('\n') + '\n\n'
     case 'ol':
-      return Array.from(node.children).map((li, i) => `${i + 1}. ${nodeToMd(li).trim()}`).join('\n') + '\n\n'
-    case 'li': return inner()
-    case 'img': return `![${node.getAttribute('alt') || ''}](${node.getAttribute('src') || ''})`
+      return Array.from(node.children).map((li, index) => `${index + 1}. ${nodeToMd(li).trim()}`).join('\n') + '\n\n'
+    case 'li':
+      return inner()
+    case 'img':
+      return `![${node.getAttribute('alt') || ''}](${node.getAttribute('src') || ''})`
     case 'table': {
       const rows = Array.from(node.querySelectorAll('tr'))
       if (!rows.length) return ''
       const toRow = (tr) => '| ' + Array.from(tr.querySelectorAll('th,td'))
-        .map(c => c.textContent.trim().replace(/\|/g, '\\|') || ' ').join(' | ') + ' |'
+        .map(cell => cell.textContent.trim().replace(/\|/g, '\\|') || ' ')
+        .join(' | ') + ' |'
       const colCount = rows[0].querySelectorAll('th,td').length
-      const sep = '| ' + Array(colCount).fill('---').join(' | ') + ' |'
-      return [toRow(rows[0]), sep, ...rows.slice(1).map(toRow)].join('\n') + '\n\n'
+      const separator = '| ' + Array(colCount).fill('---').join(' | ') + ' |'
+      return [toRow(rows[0]), separator, ...rows.slice(1).map(toRow)].join('\n') + '\n\n'
     }
-    case 'thead': case 'tbody': case 'tr': case 'th': case 'td': return inner()
-    case 'a': return `[${inner()}](${node.getAttribute('href') || ''})`
-    case 'p': case 'div': return inner() + '\n\n'
-    default: return inner()
+    case 'thead':
+    case 'tbody':
+    case 'tr':
+    case 'th':
+    case 'td':
+      return inner()
+    case 'a':
+      return `[${inner()}](${node.getAttribute('href') || ''})`
+    case 'p':
+    case 'div':
+      return inner() + '\n\n'
+    default:
+      return inner()
   }
 }
 
 function htmlToMarkdown(html) {
   const div = document.createElement('div')
-  div.innerHTML = html
+  div.innerHTML = sanitizeVisualHtml(html)
   return Array.from(div.childNodes).map(nodeToMd).join('').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-// Main component
 export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
   const { t } = useLang()
   const [phase, setPhase] = useState('intro')
@@ -107,19 +152,19 @@ export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
     { label: t('visual.tb.h2'), cmd: 'formatBlock', val: 'h2', title: t('visual.tb.h2t') },
     { label: t('visual.tb.h3'), cmd: 'formatBlock', val: 'h3', title: t('visual.tb.h3t') },
     null,
-    { label: t('visual.tb.bold'),   cmd: 'bold',          title: t('visual.tb.boldt'),   cls: 'bold' },
-    { label: t('visual.tb.italic'), cmd: 'italic',        title: t('visual.tb.italict'), cls: 'italic' },
+    { label: t('visual.tb.bold'), cmd: 'bold', title: t('visual.tb.boldt'), cls: 'bold' },
+    { label: t('visual.tb.italic'), cmd: 'italic', title: t('visual.tb.italict'), cls: 'italic' },
     { label: t('visual.tb.strike'), cmd: 'strikeThrough', title: t('visual.tb.striket'), cls: 'strike' },
-    { label: t('visual.tb.code'),   cmd: 'code',          title: t('visual.tb.codet'),   cls: 'code-btn', special: 'code' },
+    { label: t('visual.tb.code'), cmd: 'code', title: t('visual.tb.codet'), cls: 'code-btn', special: 'code' },
     null,
-    { label: t('visual.tb.quote'), cmd: 'formatBlock',         val: 'blockquote', title: t('visual.tb.quotet') },
-    { label: t('visual.tb.ul'),    cmd: 'insertUnorderedList',                    title: t('visual.tb.ult') },
-    { label: t('visual.tb.ol'),    cmd: 'insertOrderedList',                      title: t('visual.tb.olt') },
+    { label: t('visual.tb.quote'), cmd: 'formatBlock', val: 'blockquote', title: t('visual.tb.quotet') },
+    { label: t('visual.tb.ul'), cmd: 'insertUnorderedList', title: t('visual.tb.ult') },
+    { label: t('visual.tb.ol'), cmd: 'insertOrderedList', title: t('visual.tb.olt') },
     null,
-    { label: t('visual.tb.link'),        cmd: 'createLink', title: t('visual.tb.linkt'),        special: 'link' },
-    { label: t('visual.tb.table'),       cmd: '',           title: t('visual.tb.tablet'),        special: 'table' },
-    { label: t('visual.tb.imageUrl'),    cmd: '',           title: t('visual.tb.imageUrlt'),     special: 'image-url' },
-    { label: t('visual.tb.imageUpload'), cmd: '',           title: t('visual.tb.imageUploadt'),  special: 'image-upload' },
+    { label: t('visual.tb.link'), cmd: 'createLink', title: t('visual.tb.linkt'), special: 'link' },
+    { label: t('visual.tb.table'), cmd: '', title: t('visual.tb.tablet'), special: 'table' },
+    { label: t('visual.tb.imageUrl'), cmd: '', title: t('visual.tb.imageUrlt'), special: 'image-url' },
+    { label: t('visual.tb.imageUpload'), cmd: '', title: t('visual.tb.imageUploadt'), special: 'image-upload' },
   ]
 
   const execCmd = useCallback((item) => {
@@ -129,7 +174,7 @@ export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
     } else if (item.special === 'image-url') {
       const url = window.prompt(t('visual.imageUrlPrompt'), 'https://')
       if (url) {
-        document.execCommand('insertHTML', false, `<img src="${url}" alt="image" style="max-width:100%">`)
+        document.execCommand('insertHTML', false, `<img src="${escapeHtml(url)}" alt="image">`)
       }
     } else if (item.special === 'image-upload') {
       const input = document.createElement('input')
@@ -144,7 +189,7 @@ export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
             replaceUploadPlaceholder(
               editRef,
               placeholderId,
-              `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name)}" style="max-width:100%">`
+              `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name)}">`
             )
           })
           .catch(() => removeUploadPlaceholder(editRef, placeholderId))
@@ -153,26 +198,30 @@ export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
       return
     } else if (item.special === 'code') {
       const sel = window.getSelection()
-      if (!sel || sel.rangeCount === 0) { editRef.current?.focus(); return }
+      if (!sel || sel.rangeCount === 0) {
+        editRef.current?.focus()
+        return
+      }
       const range = sel.getRangeAt(0)
-      // Walk up to find enclosing <code>
-      let cur = range.commonAncestorContainer
-      if (cur.nodeType === 3) cur = cur.parentNode
+      let current = range.commonAncestorContainer
+      if (current.nodeType === 3) current = current.parentNode
       let codeEl = null
-      while (cur && cur !== editRef.current) {
-        if (cur.nodeName === 'CODE') { codeEl = cur; break }
-        cur = cur.parentNode
+      while (current && current !== editRef.current) {
+        if (current.nodeName === 'CODE') {
+          codeEl = current
+          break
+        }
+        current = current.parentNode
       }
       if (codeEl) {
-        // Toggle off: unwrap
         const parent = codeEl.parentNode
         while (codeEl.firstChild) parent.insertBefore(codeEl.firstChild, codeEl)
         parent.removeChild(codeEl)
       } else if (!sel.isCollapsed) {
-        // Toggle on: wrap selection
         const code = document.createElement('code')
-        try { range.surroundContents(code) }
-        catch {
+        try {
+          range.surroundContents(code)
+        } catch {
           const frag = range.extractContents()
           code.appendChild(frag)
           range.insertNode(code)
@@ -180,7 +229,7 @@ export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
         sel.removeAllRanges()
       }
     } else if (item.val === 'blockquote') {
-      const blockVal = document.queryCommandValue('formatBlock').toLowerCase()
+      const blockVal = `${document.queryCommandValue('formatBlock') || ''}`.toLowerCase()
       if (blockVal === 'blockquote') {
         document.execCommand('formatBlock', false, 'p')
       } else {
@@ -195,9 +244,12 @@ export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
   }, [t, uploadConfig])
 
   const handleInsert = useCallback(() => {
-    const html = editRef.current?.innerHTML || ''
+    const html = sanitizeVisualHtml(editRef.current?.innerHTML || '')
     const md = htmlToMarkdown(html)
-    if (!md) { onClose(); return }
+    if (!md) {
+      onClose()
+      return
+    }
     const view = editorViewRef.current
     if (view) {
       const { from, to } = view.state.selection.main
@@ -214,14 +266,21 @@ export default function VisualEditor({ editorViewRef, uploadConfig, onClose }) {
       <div className="vis-modal">
         {phase === 'intro'
           ? <IntroScreen onConfirm={() => setPhase('editor')} onClose={onClose} />
-          : <EditorScreen editRef={editRef} execCmd={execCmd} visToolbar={VIS_TOOLBAR} onInsert={handleInsert} onClose={onClose} />
-        }
+          : (
+            <EditorScreen
+              editRef={editRef}
+              execCmd={execCmd}
+              visToolbar={VIS_TOOLBAR}
+              onInsert={handleInsert}
+              onClose={onClose}
+              uploadConfig={uploadConfig}
+            />
+          )}
       </div>
     </div>
   )
 }
 
-// Intro screen
 function IntroScreen({ onConfirm, onClose }) {
   const { t } = useLang()
   return (
@@ -229,8 +288,8 @@ function IntroScreen({ onConfirm, onClose }) {
       <button className="modal-close vis-intro-close" onClick={onClose}>✕</button>
       <div className="vis-intro-bg" />
       <div className="vis-intro-title">
-        {'PokerS文档'.split('').map((ch, i) => (
-          <span key={i} className="vis-char" style={{ animationDelay: `${i * 0.07}s` }}>{ch}</span>
+        {'PokerS文档'.split('').map((ch, index) => (
+          <span key={index} className="vis-char" style={{ animationDelay: `${index * 0.07}s` }}>{ch}</span>
         ))}
       </div>
       <p className="vis-intro-sub">{t('visual.introSub')}</p>
@@ -239,8 +298,7 @@ function IntroScreen({ onConfirm, onClose }) {
   )
 }
 
-// Editor screen
-function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
+function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose, uploadConfig }) {
   const { t } = useLang()
   const [showTablePicker, setShowTablePicker] = useState(false)
   const [showCodePicker, setShowCodePicker] = useState(false)
@@ -248,11 +306,23 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
 
   useEffect(() => {
     const draft = localStorage.getItem(VISUAL_DRAFT_KEY)
-    if (draft && editRef.current) editRef.current.innerHTML = draft
+    if (!draft || !editRef.current) return
+    const safeDraft = applySanitizedEditorHtml(editRef, draft)
+    if (safeDraft) {
+      localStorage.setItem(VISUAL_DRAFT_KEY, safeDraft)
+    } else {
+      localStorage.removeItem(VISUAL_DRAFT_KEY)
+    }
   }, [editRef])
 
   const handleInput = useCallback(() => {
-    localStorage.setItem(VISUAL_DRAFT_KEY, editRef.current?.innerHTML || '')
+    if (!editRef.current) return
+    const safeHtml = applySanitizedEditorHtml(editRef, editRef.current.innerHTML)
+    if (safeHtml) {
+      localStorage.setItem(VISUAL_DRAFT_KEY, safeHtml)
+    } else {
+      localStorage.removeItem(VISUAL_DRAFT_KEY)
+    }
   }, [editRef])
 
   const handleClear = useCallback(() => {
@@ -264,13 +334,16 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
 
   const updateFormats = useCallback(() => {
     try {
-      const blockVal = document.queryCommandValue('formatBlock').toLowerCase()
+      const blockVal = `${document.queryCommandValue('formatBlock') || ''}`.toLowerCase()
       const sel = window.getSelection()
       let inCode = false
       if (sel && sel.rangeCount > 0) {
         let node = sel.getRangeAt(0).commonAncestorContainer
         while (node && node !== editRef.current) {
-          if (node.nodeName === 'CODE') { inCode = true; break }
+          if (node.nodeName === 'CODE') {
+            inCode = true
+            break
+          }
           node = node.parentNode
         }
       }
@@ -280,7 +353,9 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
         strikeThrough: document.queryCommandState('strikeThrough'),
         insertUnorderedList: document.queryCommandState('insertUnorderedList'),
         insertOrderedList: document.queryCommandState('insertOrderedList'),
-        h1: blockVal === 'h1', h2: blockVal === 'h2', h3: blockVal === 'h3',
+        h1: blockVal === 'h1',
+        h2: blockVal === 'h2',
+        h3: blockVal === 'h3',
         blockquote: blockVal === 'blockquote',
         code: inCode,
       })
@@ -304,21 +379,17 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-    const html = `<pre data-lang="${lang}"><code>${escaped}</code></pre><p><br></p>`
+    const html = `<pre data-lang="${escapeHtml(lang)}"><code>${escaped}</code></pre><p><br></p>`
     editRef.current?.focus()
     document.execCommand('insertHTML', false, html)
     setShowCodePicker(false)
   }, [editRef])
 
   const insertTable = useCallback((rows, cols) => {
-    const thCells = Array.from({ length: cols }, (_, i) =>
-      `<th style="border:1px solid var(--border-color,#ccc);padding:6px 10px;background:var(--bg-secondary,#f5f5f7);font-weight:600">Col${i + 1}</th>`
-    ).join('')
-    const tdCells = Array.from({ length: cols }, () =>
-      `<td style="border:1px solid var(--border-color,#ccc);padding:6px 10px"> </td>`
-    ).join('')
+    const thCells = Array.from({ length: cols }, (_, index) => `<th>Col${index + 1}</th>`).join('')
+    const tdCells = Array.from({ length: cols }, () => '<td> </td>').join('')
     const dataRows = Array.from({ length: rows - 1 }, () => `<tr>${tdCells}</tr>`).join('')
-    const html = `<table style="border-collapse:collapse;width:100%;margin:.6em 0"><thead><tr>${thCells}</tr></thead><tbody>${dataRows}</tbody></table><p><br></p>`
+    const html = `<table><thead><tr>${thCells}</tr></thead><tbody>${dataRows}</tbody></table><p><br></p>`
     editRef.current?.focus()
     document.execCommand('insertHTML', false, html)
     setShowTablePicker(false)
@@ -327,20 +398,36 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
   const handlePaste = useCallback((e) => {
     const items = Array.from(e.clipboardData?.items || [])
     const imageItem = items.find(item => item.type.startsWith('image/'))
-    if (!imageItem) return
-    e.preventDefault()
-    const file = imageItem.getAsFile()
-    if (!file) return
-    const placeholderId = insertUploadPlaceholder(editRef, file.name || 'image')
-    uploadVisualImage(file, uploadConfig)
-      .then((src) => {
-        replaceUploadPlaceholder(
-          editRef,
-          placeholderId,
-          `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name || 'image')}" style="max-width:100%">`
-        )
-      })
-      .catch(() => removeUploadPlaceholder(editRef, placeholderId))
+    if (imageItem) {
+      e.preventDefault()
+      const file = imageItem.getAsFile()
+      if (!file) return
+      const placeholderId = insertUploadPlaceholder(editRef, file.name || 'image')
+      uploadVisualImage(file, uploadConfig)
+        .then((src) => {
+          replaceUploadPlaceholder(
+            editRef,
+            placeholderId,
+            `<img src="${escapeHtml(src)}" alt="${escapeHtml(file.name || 'image')}">`
+          )
+        })
+        .catch(() => removeUploadPlaceholder(editRef, placeholderId))
+      return
+    }
+
+    const html = e.clipboardData?.getData('text/html')
+    if (html) {
+      e.preventDefault()
+      const safeHtml = sanitizeVisualHtml(html)
+      if (safeHtml) document.execCommand('insertHTML', false, safeHtml)
+      return
+    }
+
+    const text = e.clipboardData?.getData('text/plain')
+    if (text) {
+      e.preventDefault()
+      document.execCommand('insertText', false, text)
+    }
   }, [editRef, uploadConfig])
 
   return (
@@ -350,12 +437,12 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
         <button className="modal-close" onClick={onClose}>✕</button>
       </div>
       <div className="vis-toolbar">
-        {visToolbar.map((item, i) =>
+        {visToolbar.map((item, index) =>
           item === null
-            ? <span key={i} className="toolbar-sep" />
+            ? <span key={index} className="toolbar-sep" />
             : item.special === 'table'
               ? (
-                <div key={i} style={{ position: 'relative' }}>
+                <div key={index} style={{ position: 'relative' }}>
                   <button
                     className="tb-btn"
                     title={item.title}
@@ -370,38 +457,38 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
                 </div>
               )
               : item.special === 'code'
-              ? (
-                <div key={i} style={{ position: 'relative' }}>
+                ? (
+                  <div key={index} style={{ position: 'relative' }}>
+                    <button
+                      className={`tb-btn ${item.cls || ''} ${isActive(item) ? 'active' : ''}`}
+                      title={item.title}
+                      onMouseDown={e => {
+                        e.preventDefault()
+                        const sel = window.getSelection()
+                        if (sel && !sel.isCollapsed) {
+                          execCmd(item)
+                          setTimeout(updateFormats, 0)
+                        } else {
+                          setShowCodePicker(v => !v)
+                        }
+                      }}
+                    >{item.label}</button>
+                    {showCodePicker && (
+                      <CodeBlockPicker
+                        onInsert={insertCodeBlock}
+                        onClose={() => setShowCodePicker(false)}
+                      />
+                    )}
+                  </div>
+                )
+                : (
                   <button
+                    key={index}
                     className={`tb-btn ${item.cls || ''} ${isActive(item) ? 'active' : ''}`}
                     title={item.title}
-                    onMouseDown={e => {
-                      e.preventDefault()
-                      const sel = window.getSelection()
-                      if (sel && !sel.isCollapsed) {
-                        execCmd(item)
-                        setTimeout(updateFormats, 0)
-                      } else {
-                        setShowCodePicker(v => !v)
-                      }
-                    }}
+                    onMouseDown={e => { e.preventDefault(); execCmd(item); setTimeout(updateFormats, 0) }}
                   >{item.label}</button>
-                  {showCodePicker && (
-                    <CodeBlockPicker
-                      onInsert={insertCodeBlock}
-                      onClose={() => setShowCodePicker(false)}
-                    />
-                  )}
-                </div>
-              )
-              : (
-                <button
-                  key={i}
-                  className={`tb-btn ${item.cls || ''} ${isActive(item) ? 'active' : ''}`}
-                  title={item.title}
-                  onMouseDown={e => { e.preventDefault(); execCmd(item); setTimeout(updateFormats, 0) }}
-                >{item.label}</button>
-              )
+                )
         )}
       </div>
       <div
@@ -424,14 +511,15 @@ function EditorScreen({ editRef, execCmd, visToolbar, onInsert, onClose }) {
   )
 }
 
-// Code block picker
 function CodeBlockPicker({ onInsert, onClose }) {
   const { t } = useLang()
   const [lang, setLang] = useState('javascript')
   const [code, setCode] = useState('')
   const taRef = useRef(null)
 
-  useEffect(() => { taRef.current?.focus() }, [])
+  useEffect(() => {
+    taRef.current?.focus()
+  }, [])
 
   return (
     <div className="vis-code-picker" onMouseDown={e => e.stopPropagation()}>
@@ -461,7 +549,6 @@ function CodeBlockPicker({ onInsert, onClose }) {
   )
 }
 
-// Mini table grid picker
 function TablePicker({ onInsert, onClose }) {
   const { t } = useLang()
   const [hRow, setHRow] = useState(0)
@@ -471,14 +558,14 @@ function TablePicker({ onInsert, onClose }) {
   return (
     <div className="vis-table-picker" onMouseLeave={() => { setHRow(0); setHCol(0) }}>
       <div className="vis-table-grid">
-        {Array.from({ length: GRID }, (_, r) => (
-          <div key={r} style={{ display: 'flex', gap: 3 }}>
-            {Array.from({ length: GRID }, (_, c) => (
+        {Array.from({ length: GRID }, (_, row) => (
+          <div key={row} style={{ display: 'flex', gap: 3 }}>
+            {Array.from({ length: GRID }, (_, col) => (
               <div
-                key={c}
+                key={col}
                 className="vis-table-cell"
-                style={{ background: (r < hRow && c < hCol) ? 'var(--accent)' : 'var(--border-color)' }}
-                onMouseEnter={() => { setHRow(r + 1); setHCol(c + 1) }}
+                style={{ background: (row < hRow && col < hCol) ? 'var(--accent)' : 'var(--border-color)' }}
+                onMouseEnter={() => { setHRow(row + 1); setHCol(col + 1) }}
                 onClick={() => { if (hRow > 0 && hCol > 0) onInsert(hRow, hCol); else onClose() }}
               />
             ))}
@@ -491,5 +578,3 @@ function TablePicker({ onInsert, onClose }) {
     </div>
   )
 }
-
-

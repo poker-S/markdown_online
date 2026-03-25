@@ -1030,6 +1030,20 @@ a.guide-about-link:hover { color: var(--accent); }
 .vis-content ul, .vis-content ol { padding-left: 2em; margin: .5em 0; }
 .vis-content li { margin: .25em 0; }
 .vis-content a { color: var(--accent); }
+.vis-content img { display: block; max-width: 100%; height: auto; margin: .6em 0; }
+.vis-content table { width: 100%; border-collapse: collapse; margin: .6em 0; }
+.vis-content th, .vis-content td { border: 1px solid var(--border-color); padding: 6px 10px; vertical-align: top; }
+.vis-content th { background: var(--bg-secondary); font-weight: 600; }
+.vis-content [data-uploading-id] {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 .vis-content code { font-family: var(--font-mono); font-size: .875em; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 3px; padding: .1em .4em; color: #d63384; }
 [data-theme="dark"] .vis-content code { color: #ff6b9d; }
 [data-theme="dark"] .vis-content blockquote { background: rgba(10,132,255,0.06); }
