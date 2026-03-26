@@ -100,6 +100,8 @@ export const translations = {
       syntaxTitle: 'Markdown 语法',
       featuresTitle: '编辑器功能',
       aboutTitle: '关于',
+      aboutGithubLabel: 'GitHub 开源仓库',
+      aboutWechatLabel: '微信公众号搜索虫队长',
       changelogTitle: '更新日志',
       changelog: [
         { ver: 'v1.2.0', date: '2026-02-28', items: [
@@ -316,6 +318,8 @@ function hello(name) {
       syntaxTitle: 'Markdown Syntax',
       featuresTitle: 'Editor Features',
       aboutTitle: 'About',
+      aboutGithubLabel: 'GitHub Repository',
+      aboutWechatLabel: 'WeChat Official Account: 虫队长',
       changelogTitle: 'Changelog',
       changelog: [
         { ver: 'v1.2.0', date: '2026-02-28', items: [

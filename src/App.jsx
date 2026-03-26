@@ -1,7 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import DOMPurify from 'dompurify'
-import { inlineStylesForWechat } from './utils/inlineStyles.js'
-import { htmlToBBCode } from './utils/bbcode.js'
 import { LangContext } from './utils/LangContext.jsx'
 import { translations } from './utils/i18n.js'
 import Toolbar from './components/Toolbar.jsx'
@@ -11,6 +8,7 @@ import StatusBar from './components/StatusBar.jsx'
 import Settings from './components/Settings.jsx'
 import ImageModeHint, { shouldShowHint } from './components/ImageModeHint.jsx'
 import GuidePanel from './components/GuidePanel.jsx'
+import BootScreen from './components/BootScreen.jsx'
 import { getDefaultUploadConfig, normalizeUploadConfig } from './utils/imageUpload.js'
 
 const UPLOAD_CONFIG_KEY = 'md-editor-upload-config'
@@ -46,6 +44,7 @@ export default function App() {
   const [showGuide, setShowGuide] = useState(false)
   const [showHint, setShowHint] = useState(() => shouldShowHint())
   const [lastSaved, setLastSaved] = useState(saved.content != null ? Date.now() : null)
+  const [showBootScreen, setShowBootScreen] = useState(true)
   const [uploadConfig, setUploadConfig] = useState(() => {
     try {
       return normalizeUploadConfig(JSON.parse(localStorage.getItem(UPLOAD_CONFIG_KEY)) || getDefaultUploadConfig())
@@ -65,31 +64,37 @@ export default function App() {
 
   const prevLangRef = useRef(lang)
 
-  const handleEditorScroll = useCallback((scrollDOM) => {
+  const syncScrollPosition = useCallback((source, target, sourceType) => {
+    if (!source || !target) return
     if (viewModeRef.current !== 'split') return
-    if (isSyncingRef.current === 'preview') return
-    const preview = previewScrollRef.current
-    if (!preview) return
-    const max = scrollDOM.scrollHeight - scrollDOM.clientHeight
-    if (max <= 0) return
-    isSyncingRef.current = 'editor'
-    preview.scrollTop = (scrollDOM.scrollTop / max) * Math.max(0, preview.scrollHeight - preview.clientHeight)
-    requestAnimationFrame(() => { isSyncingRef.current = null })
+    if (isSyncingRef.current && isSyncingRef.current !== sourceType) return
+
+    const sourceMax = source.scrollHeight - source.clientHeight
+    const targetMax = target.scrollHeight - target.clientHeight
+
+    if (sourceMax <= 0 || targetMax <= 0) {
+      target.scrollTop = 0
+      return
+    }
+
+    isSyncingRef.current = sourceType
+    target.scrollTop = (source.scrollTop / sourceMax) * targetMax
+    requestAnimationFrame(() => {
+      if (isSyncingRef.current === sourceType) {
+        isSyncingRef.current = null
+      }
+    })
   }, [])
 
-  const handlePreviewScroll = useCallback(() => {
-    if (viewModeRef.current !== 'split') return
-    if (isSyncingRef.current === 'editor') return
+  const handleEditorScroll = useCallback((scrollDOM) => {
     const preview = previewScrollRef.current
+    syncScrollPosition(scrollDOM, preview, 'editor')
+  }, [syncScrollPosition])
+
+  const handlePreviewScroll = useCallback((preview) => {
     const editorView = editorViewRef.current
-    if (!preview || !editorView) return
-    const max = preview.scrollHeight - preview.clientHeight
-    if (max <= 0) return
-    isSyncingRef.current = 'preview'
-    const scroller = editorView.scrollDOM
-    scroller.scrollTop = (preview.scrollTop / max) * Math.max(0, scroller.scrollHeight - scroller.clientHeight)
-    requestAnimationFrame(() => { isSyncingRef.current = null })
-  }, [])
+    syncScrollPosition(preview, editorView?.scrollDOM, 'preview')
+  }, [syncScrollPosition])
 
   useEffect(() => {
     localStorage.setItem(LANG_KEY, lang)
@@ -156,14 +161,24 @@ export default function App() {
     if (!window.confirm(t('app.resetConfirm'))) return
     localStorage.removeItem(AUTOSAVE_KEY)
     localStorage.removeItem(UPLOAD_CONFIG_KEY)
+    localStorage.removeItem(LANG_KEY)
     localStorage.removeItem('md-editor-img-hint-dismissed')
-    setContent(tr.defaultContent)
+    setLang('zh')
+    setContent(translations.zh.defaultContent)
     setTheme('light')
+    setViewMode('split')
+    setSplitRatio(50)
+    setIsFocusMode(false)
     setFileName('Untitled.md')
+    setShowRename(false)
+    setRenameInput('')
+    setShowSettings(false)
+    setShowGuide(false)
+    setShowCopyMenu(false)
     setUploadConfig(getDefaultUploadConfig())
     setShowHint(true)
     setLastSaved(null)
-  }, [tr])
+  }, [t])
 
   const handleSave = useCallback(() => {
     const blob = new Blob([content], { type: 'text/markdown' })
@@ -193,6 +208,7 @@ export default function App() {
   const handleCopyRich = useCallback(async () => {
     const previewEl = document.querySelector('.preview-content')
     if (!previewEl) return
+    const { inlineStylesForWechat } = await import('./utils/inlineStyles.js')
     const html = await inlineStylesForWechat(previewEl)
     const msg = t('app.copySuccess')
     try {
@@ -216,11 +232,12 @@ export default function App() {
       document.body.removeChild(div)
       alert(msg)
     }
-  }, [tr])
+  }, [t])
 
   const handleCopy52pojie = useCallback(async () => {
     const previewEl = document.querySelector('.preview-content')
     if (!previewEl) return
+    const { htmlToBBCode } = await import('./utils/bbcode.js')
     const bbcode = htmlToBBCode(previewEl.innerHTML)
     const msg = t('app.copy52pojieSuccess')
     try {
@@ -238,13 +255,13 @@ export default function App() {
     }
   }, [t])
 
-  const handleExportHtml = useCallback(() => {
-    import('./components/Preview.jsx').then(() => {
-      const previewEl = document.querySelector('.preview-content')
-      if (!previewEl) return
-      const safeBody = DOMPurify.sanitize(previewEl.innerHTML)
-      const safeTitle = fileName.replace('.md', '').replace(/[<>"&]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]))
-      const html = `<!DOCTYPE html>
+  const handleExportHtml = useCallback(async () => {
+    const previewEl = document.querySelector('.preview-content')
+    if (!previewEl) return
+    const { default: DOMPurify } = await import('dompurify')
+    const safeBody = DOMPurify.sanitize(previewEl.innerHTML)
+    const safeTitle = fileName.replace('.md', '').replace(/[<>"&]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]))
+    const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -254,14 +271,13 @@ export default function App() {
 </head>
 <body>${safeBody}</body>
 </html>`
-      const blob = new Blob([html], { type: 'text/html' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName.replace(/\.md$/, '.html')
-      a.click()
-      URL.revokeObjectURL(url)
-    })
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName.replace(/\.md$/, '.html')
+    a.click()
+    URL.revokeObjectURL(url)
   }, [fileName])
 
   useEffect(() => {
@@ -286,6 +302,7 @@ export default function App() {
 
   return (
     <LangContext.Provider value={lang}>
+      <>
       <div className={`app ${isFocusMode ? 'focus-mode' : ''}`}>
         {/* Title Bar */}
         <div className="title-bar">
@@ -371,9 +388,13 @@ export default function App() {
           )}
 
           {viewMode !== 'editor' && (
-            <div className="preview-pane" style={{ width: viewMode === 'split' ? `${100 - splitRatio}%` : '100%' }}>
-              <Preview content={content} theme={theme} scrollRef={previewScrollRef} onScroll={handlePreviewScroll} />
-            </div>
+            <Preview
+              content={content}
+              theme={theme}
+              scrollRef={previewScrollRef}
+              onScroll={handlePreviewScroll}
+              paneStyle={{ width: viewMode === 'split' ? `${100 - splitRatio}%` : '100%' }}
+            />
           )}
         </div>
 
@@ -437,6 +458,8 @@ export default function App() {
           )
         })()}
       </div>
+      {showBootScreen && <BootScreen onStart={() => setShowBootScreen(false)} />}
+      </>
     </LangContext.Provider>
   )
 }

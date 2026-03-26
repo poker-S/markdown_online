@@ -5,7 +5,7 @@ import { fileToBase64, uploadImage } from '../utils/imageUpload.js'
 
 const VISUAL_DRAFT_KEY = 'md-editor-visual-draft'
 const VISUAL_ALLOWED_TAGS = [
-  'a', 'b', 'blockquote', 'br', 'code', 'del', 'div', 'em', 'h1', 'h2', 'h3',
+  'a', 'b', 'blockquote', 'br', 'code', 'del', 'div', 'em', 'h1', 'h2', 'h3', 'i',
   'img', 'li', 'ol', 'p', 'pre', 's', 'span', 'strike', 'strong', 'table',
   'tbody', 'td', 'th', 'thead', 'tr', 'ul',
 ]

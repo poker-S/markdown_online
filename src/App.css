@@ -340,6 +340,8 @@ html, body, #root {
   overflow-y: auto;
   background: var(--bg-primary);
   flex-shrink: 0;
+  min-height: 0;
+  min-width: 0;
 }
 
 .preview-content {
@@ -589,14 +591,6 @@ html, body, #root {
 }
 .form-group input:focus,
 .form-group select:focus { border-color: var(--accent); }
-
-.form-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-.form-hint a { color: var(--accent); text-decoration: none; }
-.form-hint a:hover { text-decoration: underline; }
 
 .modal-footer {
   display: flex;

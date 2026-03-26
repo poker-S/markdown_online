@@ -57,10 +57,10 @@ export default function GuidePanel({ onClose }) {
             <h3 className="guide-section-title">{t('guide.aboutTitle')}</h3>
             <div className="guide-about-links">
               <a href="https://github.com/poker-S/markdown_online" target="_blank" rel="noopener noreferrer" className="guide-about-link">
-                <span className="guide-about-icon">⭐</span> GitHub 开源仓库
+                <span className="guide-about-icon">⭐</span> {t('guide.aboutGithubLabel')}
               </a>
               <span className="guide-about-link guide-about-wechat">
-                <span className="guide-about-icon">📱</span> 微信公众号搜索虫队长
+                <span className="guide-about-icon">📱</span> {t('guide.aboutWechatLabel')}
               </span>
             </div>
           </section>
